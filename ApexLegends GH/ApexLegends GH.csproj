@@ -7,7 +7,7 @@
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>ApexLegends</RootNamespace>
-    <AssemblyName>ApexLegends</AssemblyName>
+    <AssemblyName>ApexLegends GH</AssemblyName>
     <TargetFrameworkVersion>4.6.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <PreBuildEvent />
