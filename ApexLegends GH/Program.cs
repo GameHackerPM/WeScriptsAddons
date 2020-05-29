@@ -514,7 +514,7 @@ namespace ApexLegends
                                 Renderer.DrawFilledRect(300, 50, 250, 250, color);
                             }
 
-                            var countOfEntities = Components.VisualsComponent.DrawItems.Enabled ? 1000 : 60;
+                            var countOfEntities = Components.VisualsComponent.DrawItems.Enabled && !Components.AimbotComponent.AimKey.Enabled? 10000 : 60;
                             for (uint i = 0; i <= countOfEntities; i++)
                             {
                                 var entity = GetEntityByIndex(processHandle, i);
