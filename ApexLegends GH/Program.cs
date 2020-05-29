@@ -525,11 +525,11 @@ namespace ApexLegends
                                     var entHPMAX = Memory.ReadInt32(processHandle, (IntPtr)(entity.ToInt64() + MaxHealth));
                                     if (Components.VisualsComponent.DrawItems.Enabled)
                                     {
-                                        Vector2 itemPos = new Vector2(0, 0);
-                                        if (Renderer.WorldToScreen(
-                                            Memory.ReadVector3(processHandle, (IntPtr)(entity.ToInt64() + Origin)),
-                                            out itemPos, matrix, wndMargins, wndSize,
-                                            W2SType.TypeD3D9))
+                                        Vector2 itemPosVec = new Vector2(0, 0);
+                                        var itemPos = Memory.ReadVector3(processHandle, (IntPtr)(entity.ToInt64() + Origin));
+                                        var dist = GetDistance3D(myPos, itemPos);
+                                        if (dist > Components.VisualsComponent.ESPRendDist.Value) continue;
+                                        if (Renderer.WorldToScreen(itemPos, out itemPosVec, matrix, wndMargins, wndSize, W2SType.TypeD3D9))
                                         {
                                             var itemId = Memory.ReadInt32(processHandle,
                                                 (IntPtr)(entity.ToInt64() + ItemId));
@@ -561,24 +561,24 @@ namespace ApexLegends
                                                         break;
                                                 }
 
-                                                Renderer.DrawText(itemName, itemPos, selectedColor,
+                                                Renderer.DrawText(itemName, itemPosVec, selectedColor,
                                                     Components.VisualsComponent.DrawTextSize.Value,
                                                     TextAlignment.centered, false);
                                             }
                                             else if (LegendaryStuff.ContainsKey(itemId))
-                                                Renderer.DrawText(LegendaryStuff[itemId], itemPos, Color.Gold,
+                                                Renderer.DrawText(LegendaryStuff[itemId], itemPosVec, Color.Gold,
                                                     Components.VisualsComponent.DrawTextSize.Value,
                                                     TextAlignment.centered, true);
                                             else if (EliteStuff.ContainsKey(itemId))
-                                                Renderer.DrawText(EliteStuff[itemId], itemPos, Color.Violet,
+                                                Renderer.DrawText(EliteStuff[itemId], itemPosVec, Color.Violet,
                                                     Components.VisualsComponent.DrawTextSize.Value,
                                                     TextAlignment.centered, true);
                                             else if (UniqueStuff.ContainsKey(itemId))
-                                                Renderer.DrawText(UniqueStuff[itemId], itemPos, Color.Blue,
+                                                Renderer.DrawText(UniqueStuff[itemId], itemPosVec, Color.Blue,
                                                     Components.VisualsComponent.DrawTextSize.Value,
                                                     TextAlignment.centered, false);
                                             else if (CommonStuff.ContainsKey(itemId))
-                                                Renderer.DrawText(CommonStuff[itemId], itemPos, Color.White,
+                                                Renderer.DrawText(CommonStuff[itemId], itemPosVec, Color.White,
                                                     Components.VisualsComponent.DrawTextSize.Value,
                                                     TextAlignment.centered, false);
                                         }
