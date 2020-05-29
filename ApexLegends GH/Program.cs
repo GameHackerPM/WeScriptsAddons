@@ -45,6 +45,8 @@ namespace ApexLegends
         public static uint BoundingBox = 0x474; //vec3
         public static uint MaxHealth = 0x510; //int
         public static uint BoneClass = 0xED8; //ptr
+        public static uint EntityName = 0x521; //ptr
+        public static uint ItemId = 0x1548; //ptr
 
         public static uint m_latestPrimaryWeapons = 0x1934; //int
         public static uint BulletSpeed = 0x1D48; //float
@@ -56,6 +58,55 @@ namespace ApexLegends
         public static uint ViewAngles = 0x23C8;
         //public static uint BleedOutState = 0x2590; //0 = alive; 2 = downed
 
+
+        public static Dictionary<int, string> LegendaryStuff = new Dictionary<int, string>
+        {
+            {1, "Kraber"},
+            {70, "Knockdown Shield Level 4"},
+            {74, "Backpack Level 4"},
+            {62, "Body Armor Level 4"},
+            {58, "Helmet Level 4"},
+        };
+
+        public static Dictionary<int, string> EliteStuff = new Dictionary<int, string>
+        {
+            {36, "Wingman"},
+            {29, "R-301"},
+            {69, "Knockdown Shield Level 3"},
+            {73, "Backpack Level 3"},
+            {61, "Body Armor Level 3"},
+            {57, "Helmet Level 3"},
+            {51, "Med Kit"},
+            {50, "Phoenix"},
+        };
+
+        public static Dictionary<int, string> UniqueStuff = new Dictionary<int, string>
+        {
+            {11, "Flatline"},
+            {27, "Spitfire"},
+            {19, "R-99"},
+            {15, "G7 Scout"},
+            {13, "Hemlok"},
+            {68, "Knockdown Shield Level 2"},
+            {72, "Backpack Level 2"},
+            {60, "Body Armor Level 2"},
+            {56, "Helmet Level 2"},
+            {53, "Shield Battery"},
+        };
+
+        public static Dictionary<int, string> CommonStuff = new Dictionary<int, string>
+        {
+            {9, "Triple Take"},
+            {17, "Alternator"},
+            {54, "Shield Cell"},
+            {52, "Syringe"},
+            //{67, "Knockdown Shield Level 1"},
+            //{71, "Backpack Level 1"},
+            //{59, "Body Armor Level 1"},
+            //{55, "Helmet Level 1"},
+            {76, "Frag Grenade"},
+            {77, "Arc Star"},
+        };
 
 
         public static Menu RootMenu { get; private set; }
@@ -80,6 +131,7 @@ namespace ApexLegends
                 public static readonly MenuBool DrawTextDist = new MenuBool("drawtextdist", "Draw Distance", true);
                 public static readonly MenuBool DrawTimeLeft = new MenuBool("drawtimeleft", "Draw Time Left before EAC Kicks", true);
                 public static readonly MenuBool DrawRadar = new MenuBool("drawradar", "Draw Radar", true);
+                public static readonly MenuBool DrawItems = new MenuBool("drawitems", "Draw Items ESP", true);
             }
             public static class AimbotComponent
             {
@@ -111,7 +163,8 @@ namespace ApexLegends
                 Components.VisualsComponent.DrawTextSize,
                 Components.VisualsComponent.DrawTextDist,
                 Components.VisualsComponent.DrawTimeLeft,
-                Components.VisualsComponent.DrawRadar
+                Components.VisualsComponent.DrawRadar,
+                Components.VisualsComponent.DrawItems
             };
 
             AimbotMenu = new Menu("aimbotmenu", "Aimbot Menu")
@@ -460,7 +513,8 @@ namespace ApexLegends
                                 Renderer.DrawFilledRect(300, 50, 250, 250, color);
                             }
 
-                            for (uint i = 0; i <= 60; i++)
+                            var countOfEntities = Components.VisualsComponent.DrawItems.Enabled ? 10000 : 60;
+                            for (uint i = 0; i <= countOfEntities; i++)
                             {
                                 var entity = GetEntityByIndex(processHandle, i);
                                 if ((entity != IntPtr.Zero) && (localPlayer != entity))
@@ -469,6 +523,67 @@ namespace ApexLegends
                                     if (entTeam == myTeam) continue;
                                     var entHP = Memory.ReadInt32(processHandle, (IntPtr)(entity.ToInt64() + Health));
                                     var entHPMAX = Memory.ReadInt32(processHandle, (IntPtr)(entity.ToInt64() + MaxHealth));
+                                    if (Components.VisualsComponent.DrawItems.Enabled)
+                                    {
+                                        Vector2 itemPos = new Vector2(0, 0);
+                                        if (Renderer.WorldToScreen(
+                                            Memory.ReadVector3(processHandle, (IntPtr)(entity.ToInt64() + Origin)),
+                                            out itemPos, matrix, wndMargins, wndSize,
+                                            W2SType.TypeD3D9))
+                                        {
+                                            var itemId = Memory.ReadInt32(processHandle,
+                                                (IntPtr)(entity.ToInt64() + ItemId));
+                                            if (itemId >= 44 && itemId <= 48)
+                                            {
+                                                var itemName = "";
+                                                Color selectedColor = Color.LightYellow;
+                                                switch (itemId)
+                                                {
+                                                    case 44:
+                                                        itemName = "Light Rounds";
+                                                        selectedColor = Color.LightYellow;
+                                                        break;
+                                                    case 45:
+                                                        itemName = "Energy Ammo";
+                                                        selectedColor = Color.Yellow;
+                                                        break;
+                                                    case 46:
+                                                        itemName = "Shotgun Shells";
+                                                        selectedColor = Color.DarkRed;
+                                                        break;
+                                                    case 47:
+                                                        itemName = "Heavy Rounds";
+                                                        selectedColor = Color.Green;
+                                                        break;
+                                                    case 48:
+                                                        itemName = "Sniper Ammo";
+                                                        selectedColor = Color.BlueViolet;
+                                                        break;
+                                                }
+
+                                                Renderer.DrawText(itemName, itemPos, selectedColor,
+                                                    Components.VisualsComponent.DrawTextSize.Value,
+                                                    TextAlignment.centered, false);
+                                            }
+                                            else if (LegendaryStuff.ContainsKey(itemId))
+                                                Renderer.DrawText(LegendaryStuff[itemId], itemPos, Color.Gold,
+                                                    Components.VisualsComponent.DrawTextSize.Value,
+                                                    TextAlignment.centered, true);
+                                            else if (EliteStuff.ContainsKey(itemId))
+                                                Renderer.DrawText(EliteStuff[itemId], itemPos, Color.Violet,
+                                                    Components.VisualsComponent.DrawTextSize.Value,
+                                                    TextAlignment.centered, true);
+                                            else if (UniqueStuff.ContainsKey(itemId))
+                                                Renderer.DrawText(UniqueStuff[itemId], itemPos, Color.Blue,
+                                                    Components.VisualsComponent.DrawTextSize.Value,
+                                                    TextAlignment.centered, false);
+                                            else if (CommonStuff.ContainsKey(itemId))
+                                                Renderer.DrawText(CommonStuff[itemId], itemPos, Color.White,
+                                                    Components.VisualsComponent.DrawTextSize.Value,
+                                                    TextAlignment.centered, false);
+                                        }
+                                    }
+
                                     if ((entHP > 0) && (entHPMAX > 0))
                                     {
                                         var entPos = Memory.ReadVector3(processHandle, (IntPtr)(entity.ToInt64() + Origin));
@@ -477,13 +592,14 @@ namespace ApexLegends
 
                                         if (Components.VisualsComponent.DrawRadar.Enabled)
                                         {
+                                            var angle = WritableAngles.Y;
                                             var radarPointPos = new Vector2(entPos.X, entPos.Y);
                                             radarPointPos = new Vector2(myPos.X, myPos.Y) - radarPointPos;
                                             float anotherDist = radarPointPos.Length() * 0.012f;
                                             radarPointPos.Normalize();
-                                            radarPointPos *= (float) anotherDist;
+                                            radarPointPos *= (float)anotherDist;
                                             radarPointPos += radarCenterPos;
-                                            radarPointPos = RotatePoint(radarPointPos, radarCenterPos, (WritableAngles.Y - 90) * -1);
+                                            radarPointPos = RotatePoint(radarPointPos, radarCenterPos, (angle - 90) * -1);
                                             Renderer.DrawFilledRect(radarPointPos, new Vector2(5, 5), Color.Red);
                                         }
 

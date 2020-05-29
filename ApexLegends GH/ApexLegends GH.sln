@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.30104.148
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ApexLegends", "ApexLegends GH.csproj", "{2114E7D6-05CC-465F-B4A7-43998D079BC9}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ApexLegends GH", "ApexLegends GH.csproj", "{2114E7D6-05CC-465F-B4A7-43998D079BC9}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
