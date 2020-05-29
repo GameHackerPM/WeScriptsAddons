@@ -514,7 +514,7 @@ namespace ApexLegends
                                 Renderer.DrawFilledRect(300, 50, 250, 250, color);
                             }
 
-                            var countOfEntities = Components.VisualsComponent.DrawItems.Enabled ? 10000 : 60;
+                            var countOfEntities = Components.VisualsComponent.DrawItems.Enabled ? 1000 : 60;
                             for (uint i = 0; i <= countOfEntities; i++)
                             {
                                 var entity = GetEntityByIndex(processHandle, i);
@@ -529,59 +529,62 @@ namespace ApexLegends
                                         Vector2 itemPosVec = new Vector2(0, 0);
                                         var itemPos = Memory.ReadVector3(processHandle, (IntPtr)(entity.ToInt64() + Origin));
                                         var dist = GetDistance3D(myPos, itemPos);
-                                        if (dist > (Components.VisualsComponent.ESPRendDist.Value / 4)) continue;
-                                        if (Renderer.WorldToScreen(itemPos, out itemPosVec, matrix, wndMargins, wndSize, W2SType.TypeD3D9))
+                                        if (dist < (Components.VisualsComponent.ESPRendDist.Value / 4))
                                         {
-                                            var itemId = Memory.ReadInt32(processHandle,
-                                                (IntPtr)(entity.ToInt64() + ItemId));
-                                            if (itemId >= 44 && itemId <= 48)
+                                            if (Renderer.WorldToScreen(itemPos, out itemPosVec, matrix, wndMargins,
+                                                wndSize, W2SType.TypeD3D9))
                                             {
-                                                var itemName = "";
-                                                Color selectedColor = Color.LightYellow;
-                                                switch (itemId)
+                                                var itemId = Memory.ReadInt32(processHandle,
+                                                    (IntPtr) (entity.ToInt64() + ItemId));
+                                                if (itemId >= 44 && itemId <= 48)
                                                 {
-                                                    case 44:
-                                                        itemName = "Light Rounds";
-                                                        selectedColor = Color.LightYellow;
-                                                        break;
-                                                    case 45:
-                                                        itemName = "Energy Ammo";
-                                                        selectedColor = Color.Yellow;
-                                                        break;
-                                                    case 46:
-                                                        itemName = "Shotgun Shells";
-                                                        selectedColor = Color.DarkRed;
-                                                        break;
-                                                    case 47:
-                                                        itemName = "Heavy Rounds";
-                                                        selectedColor = Color.Green;
-                                                        break;
-                                                    case 48:
-                                                        itemName = "Sniper Ammo";
-                                                        selectedColor = Color.BlueViolet;
-                                                        break;
-                                                }
+                                                    var itemName = "";
+                                                    Color selectedColor = Color.LightYellow;
+                                                    switch (itemId)
+                                                    {
+                                                        case 44:
+                                                            itemName = "Light Rounds";
+                                                            selectedColor = Color.LightYellow;
+                                                            break;
+                                                        case 45:
+                                                            itemName = "Energy Ammo";
+                                                            selectedColor = Color.Yellow;
+                                                            break;
+                                                        case 46:
+                                                            itemName = "Shotgun Shells";
+                                                            selectedColor = Color.DarkRed;
+                                                            break;
+                                                        case 47:
+                                                            itemName = "Heavy Rounds";
+                                                            selectedColor = Color.Green;
+                                                            break;
+                                                        case 48:
+                                                            itemName = "Sniper Ammo";
+                                                            selectedColor = Color.BlueViolet;
+                                                            break;
+                                                    }
 
-                                                Renderer.DrawText(itemName, itemPosVec, selectedColor,
-                                                    Components.VisualsComponent.DrawTextSize.Value,
-                                                    TextAlignment.centered, false);
+                                                    Renderer.DrawText(itemName, itemPosVec, selectedColor,
+                                                        Components.VisualsComponent.DrawTextSize.Value,
+                                                        TextAlignment.centered, false);
+                                                }
+                                                else if (LegendaryStuff.ContainsKey(itemId))
+                                                    Renderer.DrawText(LegendaryStuff[itemId], itemPosVec, Color.Gold,
+                                                        Components.VisualsComponent.DrawTextSize.Value,
+                                                        TextAlignment.centered, true);
+                                                else if (EliteStuff.ContainsKey(itemId))
+                                                    Renderer.DrawText(EliteStuff[itemId], itemPosVec, Color.Violet,
+                                                        Components.VisualsComponent.DrawTextSize.Value,
+                                                        TextAlignment.centered, true);
+                                                else if (UniqueStuff.ContainsKey(itemId))
+                                                    Renderer.DrawText(UniqueStuff[itemId], itemPosVec, Color.Blue,
+                                                        Components.VisualsComponent.DrawTextSize.Value,
+                                                        TextAlignment.centered, false);
+                                                else if (CommonStuff.ContainsKey(itemId))
+                                                    Renderer.DrawText(CommonStuff[itemId], itemPosVec, Color.White,
+                                                        Components.VisualsComponent.DrawTextSize.Value,
+                                                        TextAlignment.centered, false);
                                             }
-                                            else if (LegendaryStuff.ContainsKey(itemId))
-                                                Renderer.DrawText(LegendaryStuff[itemId], itemPosVec, Color.Gold,
-                                                    Components.VisualsComponent.DrawTextSize.Value,
-                                                    TextAlignment.centered, true);
-                                            else if (EliteStuff.ContainsKey(itemId))
-                                                Renderer.DrawText(EliteStuff[itemId], itemPosVec, Color.Violet,
-                                                    Components.VisualsComponent.DrawTextSize.Value,
-                                                    TextAlignment.centered, true);
-                                            else if (UniqueStuff.ContainsKey(itemId))
-                                                Renderer.DrawText(UniqueStuff[itemId], itemPosVec, Color.Blue,
-                                                    Components.VisualsComponent.DrawTextSize.Value,
-                                                    TextAlignment.centered, false);
-                                            else if (CommonStuff.ContainsKey(itemId))
-                                                Renderer.DrawText(CommonStuff[itemId], itemPosVec, Color.White,
-                                                    Components.VisualsComponent.DrawTextSize.Value,
-                                                    TextAlignment.centered, false);
                                         }
                                     }
 
