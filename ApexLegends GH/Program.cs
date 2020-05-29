@@ -529,7 +529,7 @@ namespace ApexLegends
                                         Vector2 itemPosVec = new Vector2(0, 0);
                                         var itemPos = Memory.ReadVector3(processHandle, (IntPtr)(entity.ToInt64() + Origin));
                                         var dist = GetDistance3D(myPos, itemPos);
-                                        if (dist > (Components.VisualsComponent.ESPRendDist.Value / 2)) continue;
+                                        if (dist > (Components.VisualsComponent.ESPRendDist.Value / 4)) continue;
                                         if (Renderer.WorldToScreen(itemPos, out itemPosVec, matrix, wndMargins, wndSize, W2SType.TypeD3D9))
                                         {
                                             var itemId = Memory.ReadInt32(processHandle,
