@@ -155,6 +155,7 @@ namespace ApexLegends
             VisualsMenu = new Menu("visualsmenu", "Visuals Menu")
             {
                 Components.VisualsComponent.DrawTheVisuals,
+                Components.VisualsComponent.ESPRendDist,
                 Components.VisualsComponent.EnemiesColor,
                 Components.VisualsComponent.DrawBox,
                 Components.VisualsComponent.DrawBoxThic.SetToolTip("Setting thickness to 0 will let the assembly auto-adjust itself depending on model distance"),
@@ -528,7 +529,7 @@ namespace ApexLegends
                                         Vector2 itemPosVec = new Vector2(0, 0);
                                         var itemPos = Memory.ReadVector3(processHandle, (IntPtr)(entity.ToInt64() + Origin));
                                         var dist = GetDistance3D(myPos, itemPos);
-                                        if (dist > Components.VisualsComponent.ESPRendDist.Value) continue;
+                                        if (dist > (Components.VisualsComponent.ESPRendDist.Value / 2)) continue;
                                         if (Renderer.WorldToScreen(itemPos, out itemPosVec, matrix, wndMargins, wndSize, W2SType.TypeD3D9))
                                         {
                                             var itemId = Memory.ReadInt32(processHandle,
