@@ -45,7 +45,7 @@ namespace ApexLegends
         public static uint BoundingBox = 0x474; //vec3
         public static uint MaxHealth = 0x510; //int
         public static uint BoneClass = 0xED8; //ptr
-        public static uint EntityName = 0x521; //ptr
+        public static uint EntityTypeStr = 0x521;//0x521; //ptr
         public static uint ItemId = 0x1548; //ptr
 
         public static uint m_latestPrimaryWeapons = 0x1934; //int
@@ -62,57 +62,64 @@ namespace ApexLegends
         public static Dictionary<int, string> LegendaryStuff = new Dictionary<int, string>
         {
             {1, "Kraber"},
-            {70, "Knockdown Shield Level 4"},
-            {74, "Backpack Level 4"},
-            {62, "Body Armor Level 4"},
-            {58, "Helmet Level 4"},
+            {3, "MASTIFF"},
+            {5, "LSTAR"},
+            {7, "HAVOC"},
+            {8, "DEVOTION"},
+            {85, "Knockdown Shield Level 4"},
+            {89, "Backpack Level 4"},
+            {77, "Body Armor Level 4"},
+            {73, "Helmet Level 4"},
+            {81, "Evo Shield Level 4"},
         };
 
         public static Dictionary<int, string> EliteStuff = new Dictionary<int, string>
         {
-            {36, "Wingman"},
-            {29, "R-301"},
-            {69, "Knockdown Shield Level 3"},
-            {73, "Backpack Level 3"},
-            {61, "Body Armor Level 3"},
-            {57, "Helmet Level 3"},
-            {51, "Med Kit"},
-            {50, "Phoenix"},
+            {49, "Wingman"},
+            {37, "R-301"},
+            {84, "Knockdown Shield Level 3"},
+            {88, "Backpack Level 3"},
+            {76, "Body Armor Level 3"},
+            {72, "Helmet Level 3"},
+            {80, "Evo Shield Level 3"},
+            {66, "Med Kit"},
+            {65, "Phoenix"},
         };
 
         public static Dictionary<int, string> UniqueStuff = new Dictionary<int, string>
         {
             {11, "Flatline"},
-            {27, "Spitfire"},
-            {19, "R-99"},
-            {15, "G7 Scout"},
-            {13, "Hemlok"},
-            {68, "Knockdown Shield Level 2"},
-            {72, "Backpack Level 2"},
-            {60, "Body Armor Level 2"},
-            {56, "Helmet Level 2"},
-            {53, "Shield Battery"},
+            {35, "Spitfire"},
+            {25, "R-99"},
+            {19, "G7 Scout"},
+            {15, "Hemlok"},
+            {83, "Knockdown Shield Level 2"},
+            {87, "Backpack Level 2"},
+            {75, "Body Armor Level 2"},
+            {71, "Helmet Level 2"},
+            {79, "Evo Shield Level 2"},
+            {68, "Shield Battery"},
         };
 
         public static Dictionary<int, string> CommonStuff = new Dictionary<int, string>
         {
             {9, "Triple Take"},
-            {17, "Alternator"},
-            {54, "Shield Cell"},
-            {52, "Syringe"},
+            {21, "Alternator"},
+            {69, "Shield Cell"},
+            {67, "Syringe"},
             //{67, "Knockdown Shield Level 1"},
             //{71, "Backpack Level 1"},
             //{59, "Body Armor Level 1"},
             //{55, "Helmet Level 1"},
-            {76, "Frag Grenade"},
-            {77, "Arc Star"},
+            {91, "Frag Grenade"},
+            {92, "Arc Star"},
         };
 
 
         public static Menu RootMenu { get; private set; }
         public static Menu VisualsMenu { get; private set; }
         public static Menu AimbotMenu { get; private set; }
-        public static Menu TestingMenu { get; private set; }
+        public static Menu ItemsMenu { get; private set; }
 
         class Components
         {
@@ -167,7 +174,6 @@ namespace ApexLegends
                 Components.VisualsComponent.DrawRadar,
                 Components.VisualsComponent.DrawItems
             };
-
             AimbotMenu = new Menu("aimbotmenu", "Aimbot Menu")
             {
                 Components.AimbotComponent.AimGlobalBool,
@@ -182,13 +188,55 @@ namespace ApexLegends
                 Components.AimbotComponent.AimFovColor,
                 Components.AimbotComponent.AimFov,
             };
+            ItemsMenu = new Menu("drawitemsespmenu", "Items Menu");
+            ItemsMenu.Add(new MenuSeperator("itemmenulegendaryseparator", "Legendary Items"));
+            ItemsMenu.Add(new MenuSeperator("itemmenulegendaryseparator1", ""));
+            ItemsMenu.Add(new MenuBool("itemsmenulegendaryenable", "Draw Legendary Items", true));
+            foreach (var anItem in LegendaryStuff)
+                ItemsMenu.Add(new MenuBool(anItem.Key.ToString(), anItem.Value, true));
+
+            ItemsMenu.Add(new MenuSeperator("itemmenueliteseparator0", ""));
+            ItemsMenu.Add(new MenuSeperator("itemmenueliteseparator", "Elite Items"));
+            ItemsMenu.Add(new MenuSeperator("itemmenueliteseparator1", ""));
+            ItemsMenu.Add(new MenuBool("itemsmenueliteenable", "Draw Elite Items", true));
+            foreach (var anItem in EliteStuff)
+                ItemsMenu.Add(new MenuBool(anItem.Key.ToString(), anItem.Value, true));
+
+            ItemsMenu.Add(new MenuSeperator("itemmenuuniqueseparator0", ""));
+            ItemsMenu.Add(new MenuSeperator("itemmenuuniqueseparator", "Unique Items"));
+            ItemsMenu.Add(new MenuSeperator("itemmenuuniqueseparator1", ""));
+            ItemsMenu.Add(new MenuBool("itemsmenuuniqueenable", "Draw Unique Items", true));
+            foreach (var anItem in UniqueStuff)
+                ItemsMenu.Add(new MenuBool(anItem.Key.ToString(), anItem.Value, true));
+
+            ItemsMenu.Add(new MenuSeperator("itemmenucommonseparator0", ""));
+            ItemsMenu.Add(new MenuSeperator("itemmenucommonseparator", "Common Items"));
+            ItemsMenu.Add(new MenuSeperator("itemmenucommonseparator1", ""));
+            ItemsMenu.Add(new MenuBool("itemsmenucommonenable", "Draw Common Items", true));
+            foreach (var anItem in CommonStuff)
+                ItemsMenu.Add(new MenuBool(anItem.Key.ToString(), anItem.Value, true));
+
+            List<KeyValuePair<int, string>> ammoItems = new List<KeyValuePair<int, string>>();
+            ammoItems.Add(new KeyValuePair<int, string>(59, "Light Rounds"));
+            ammoItems.Add(new KeyValuePair<int, string>(60, "Energy Ammo"));
+            ammoItems.Add(new KeyValuePair<int, string>(61, "Shotgun Shells"));
+            ammoItems.Add(new KeyValuePair<int, string>(62, "Heavy Rounds"));
+            ammoItems.Add(new KeyValuePair<int, string>(63, "Sniper Ammo"));
+
+            ItemsMenu.Add(new MenuSeperator("itemmenuammoseparator0", ""));
+            ItemsMenu.Add(new MenuSeperator("itemmenuammoseparator", "Ammo Items"));
+            ItemsMenu.Add(new MenuSeperator("itemmenuammoseparator1", ""));
+            var ammoItemsEnabled = new MenuBool("itemsmenuammoenable", "Draw Ammo Items", true);
+            ItemsMenu.Add(ammoItemsEnabled);
+            foreach (var anItem in ammoItems)
+                ItemsMenu.Add(new MenuBool(anItem.Key.ToString(), anItem.Value, true));
 
             RootMenu = new Menu("apexlegendsexample", "WeScript.app Apex Legends Example Assembly", true)
             {
                 Components.MainAssemblyToggle.SetToolTip("The magical boolean which completely disables/enables the assembly!"),
                 VisualsMenu,
                 AimbotMenu,
-                TestingMenu
+                ItemsMenu
             };
             RootMenu.Attach();
         }
@@ -514,7 +562,7 @@ namespace ApexLegends
                                 Renderer.DrawFilledRect(300, 50, 250, 250, color);
                             }
 
-                            var countOfEntities = Components.VisualsComponent.DrawItems.Enabled && !Components.AimbotComponent.AimKey.Enabled? 10000 : 60;
+                            var countOfEntities = Components.VisualsComponent.DrawItems.Enabled && !Components.AimbotComponent.AimKey.Enabled ? 10000 : 60;
                             for (uint i = 0; i <= countOfEntities; i++)
                             {
                                 var entity = GetEntityByIndex(processHandle, i);
@@ -535,30 +583,36 @@ namespace ApexLegends
                                                 wndSize, W2SType.TypeD3D9))
                                             {
                                                 var itemId = Memory.ReadInt32(processHandle,
-                                                    (IntPtr) (entity.ToInt64() + ItemId));
-                                                if (itemId >= 44 && itemId <= 48)
+                                                    (IntPtr)(entity.ToInt64() + ItemId));
+                                                var itemsMenuComponentDic =
+                                                    ItemsMenu.Cast<KeyValuePair<string, MenuComponent>>().ToDictionary(pair => pair.Key, pair => pair.Value);
+
+                                                if (!itemsMenuComponentDic.ContainsKey(itemId.ToString()) || !itemsMenuComponentDic[itemId.ToString()].Enabled)
+                                                    continue;
+
+                                                if (itemId >= 59 && itemId <= 63)
                                                 {
                                                     var itemName = "";
                                                     Color selectedColor = Color.LightYellow;
                                                     switch (itemId)
                                                     {
-                                                        case 44:
+                                                        case 59:
                                                             itemName = "Light Rounds";
                                                             selectedColor = Color.LightYellow;
                                                             break;
-                                                        case 45:
+                                                        case 60:
                                                             itemName = "Energy Ammo";
                                                             selectedColor = Color.Yellow;
                                                             break;
-                                                        case 46:
+                                                        case 61:
                                                             itemName = "Shotgun Shells";
                                                             selectedColor = Color.DarkRed;
                                                             break;
-                                                        case 47:
+                                                        case 62:
                                                             itemName = "Heavy Rounds";
                                                             selectedColor = Color.Green;
                                                             break;
-                                                        case 48:
+                                                        case 63:
                                                             itemName = "Sniper Ammo";
                                                             selectedColor = Color.BlueViolet;
                                                             break;
@@ -569,21 +623,41 @@ namespace ApexLegends
                                                         TextAlignment.centered, false);
                                                 }
                                                 else if (LegendaryStuff.ContainsKey(itemId))
+                                                {
+                                                    if (!itemsMenuComponentDic["itemsmenulegendaryenable"].Enabled)
+                                                        continue;
+
                                                     Renderer.DrawText(LegendaryStuff[itemId], itemPosVec, Color.Gold,
                                                         Components.VisualsComponent.DrawTextSize.Value,
                                                         TextAlignment.centered, true);
+                                                }
                                                 else if (EliteStuff.ContainsKey(itemId))
+                                                {
+                                                    if (!itemsMenuComponentDic["itemsmenueliteenable"].Enabled)
+                                                        continue;
+
                                                     Renderer.DrawText(EliteStuff[itemId], itemPosVec, Color.Violet,
                                                         Components.VisualsComponent.DrawTextSize.Value,
                                                         TextAlignment.centered, true);
+                                                }
                                                 else if (UniqueStuff.ContainsKey(itemId))
+                                                {
+                                                    if (!itemsMenuComponentDic["itemsmenuuniqueenable"].Enabled)
+                                                        continue;
+
                                                     Renderer.DrawText(UniqueStuff[itemId], itemPosVec, Color.Blue,
                                                         Components.VisualsComponent.DrawTextSize.Value,
                                                         TextAlignment.centered, false);
+                                                }
                                                 else if (CommonStuff.ContainsKey(itemId))
+                                                {
+                                                    if (!itemsMenuComponentDic["itemsmenucommonenable"].Enabled)
+                                                        continue;
+
                                                     Renderer.DrawText(CommonStuff[itemId], itemPosVec, Color.White,
                                                         Components.VisualsComponent.DrawTextSize.Value,
                                                         TextAlignment.centered, false);
+                                                }
                                             }
                                         }
                                     }
@@ -619,7 +693,8 @@ namespace ApexLegends
                                             var ent_bone = ReadBonePos(entity, 12);//bone for head
                                             var ent_HeadPosBOX = new Vector3(entPos.X + ent_bone.X, entPos.Y + ent_bone.Y, entPos.Z + ent_bone.Z + 2.0f);
                                             Renderer.WorldToScreen(ent_HeadPosBOX, out vScreen_head, matrix, wndMargins, wndSize, W2SType.TypeD3D9);
-
+                                            var ent_Type_Str = Memory.ReadString(processHandle, (IntPtr)(entity.ToInt64() + EntityTypeStr), false);
+                                            if (ent_Type_Str != "player") continue;
                                             string dist_str = "";
                                             if (Components.VisualsComponent.DrawTextDist.Enabled)
                                             {
