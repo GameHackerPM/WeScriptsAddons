@@ -572,10 +572,13 @@ namespace ApexLegends
                                     if (entTeam == myTeam) continue;
                                     var entHP = Memory.ReadInt32(processHandle, (IntPtr)(entity.ToInt64() + Health));
                                     var entHPMAX = Memory.ReadInt32(processHandle, (IntPtr)(entity.ToInt64() + MaxHealth));
-                                    if (Components.VisualsComponent.DrawItems.Enabled)
+                                    var ent_Type_Str = Memory.ReadString(processHandle, (IntPtr)(entity.ToInt64() + EntityTypeStr), false);
+                                    if (Components.VisualsComponent.DrawItems.Enabled && ent_Type_Str != "player")
                                     {
                                         Vector2 itemPosVec = new Vector2(0, 0);
                                         var itemPos = Memory.ReadVector3(processHandle, (IntPtr)(entity.ToInt64() + Origin));
+                                        if (itemPos.Z < 0)
+                                            continue;
                                         var dist = GetDistance3D(myPos, itemPos);
                                         if (dist < (Components.VisualsComponent.ESPRendDist.Value / 4))
                                         {
@@ -664,6 +667,7 @@ namespace ApexLegends
 
                                     if ((entHP > 0) && (entHPMAX > 0))
                                     {
+                                        if (ent_Type_Str != "player") continue;
                                         var entPos = Memory.ReadVector3(processHandle, (IntPtr)(entity.ToInt64() + Origin));
                                         var dist = GetDistance3D(myPos, entPos);
                                         if (dist > Components.VisualsComponent.ESPRendDist.Value) continue;
@@ -693,8 +697,6 @@ namespace ApexLegends
                                             var ent_bone = ReadBonePos(entity, 12);//bone for head
                                             var ent_HeadPosBOX = new Vector3(entPos.X + ent_bone.X, entPos.Y + ent_bone.Y, entPos.Z + ent_bone.Z + 2.0f);
                                             Renderer.WorldToScreen(ent_HeadPosBOX, out vScreen_head, matrix, wndMargins, wndSize, W2SType.TypeD3D9);
-                                            var ent_Type_Str = Memory.ReadString(processHandle, (IntPtr)(entity.ToInt64() + EntityTypeStr), false);
-                                            if (ent_Type_Str != "player") continue;
                                             string dist_str = "";
                                             if (Components.VisualsComponent.DrawTextDist.Enabled)
                                             {
