@@ -141,7 +141,7 @@ namespace DeadByDaylight
 
         static void Main(string[] args)
         {
-            Console.WriteLine("WeScript.app experimental DBD assembly for patch 4.0.2 with Driver bypass - GH");
+            Console.WriteLine("WeScript.app experimental DBD assembly for patch 4.0.2 with Driver bypass");
             InitializeMenu();
             if (!Memory.InitDriver(DriverName.frost_64))
             {
@@ -298,10 +298,10 @@ namespace DeadByDaylight
                                     {
                                         var tempVec = Memory.ZwReadVector3(processHandle, (IntPtr)USceneComponent.ToInt64() + 0x160);
                                         var AActorID = Memory.ZwReadUInt32(processHandle, (IntPtr)AActor.ToInt64() + 0x18);
-
+                                        var retname = "";
                                         if ((AActorID > 0) && (AActorID < 200000))
                                         {
-                                            var retname = GetNameFromID(AActorID);
+                                            retname = GetNameFromID(AActorID);
                                             if ((survivorID == 0) || (killerID == 0) || (escapeID == 0) || (hatchID == 0))
                                             {
 
@@ -356,8 +356,8 @@ namespace DeadByDaylight
                                                 var isDisplayed = Memory.ZwReadBool(processHandle, (IntPtr)USkillCheck.ToInt64() + 0x0308);
                                                 if (isDisplayed && LastSpacePressedDT.AddMilliseconds(200) < DateTime.Now)
                                                 {
-                                                    var currentProgress = Memory.ZwReadFloat(processHandle, (IntPtr) USkillCheck.ToInt64() + 0x02A0);
-                                                    var startSuccessZone = Memory.ZwReadFloat(processHandle, (IntPtr) USkillCheck.ToInt64() + 0x0270);
+                                                    var currentProgress = Memory.ZwReadFloat(processHandle, (IntPtr)USkillCheck.ToInt64() + 0x02A0);
+                                                    var startSuccessZone = Memory.ZwReadFloat(processHandle, (IntPtr)USkillCheck.ToInt64() + 0x0270);
 
                                                     if (currentProgress > startSuccessZone)
                                                     {
@@ -377,7 +377,7 @@ namespace DeadByDaylight
                                                 Vector2 vScreen_f33t = new Vector2(0, 0);
                                                 if (Renderer.WorldToScreen(new Vector3(tempVec.X, tempVec.Y, tempVec.Z + 60.0f), out vScreen_h3ad, viewProj, wndMargins, wndSize, W2SType.TypeD3D11))
                                                 {
-                                                    Renderer.WorldToScreen(new Vector3(tempVec.X, tempVec.Y, tempVec.Z - 130.0f), out vScreen_f33t, viewProj, wndMargins, wndSize,                     W2SType.TypeD3D11);
+                                                    Renderer.WorldToScreen(new Vector3(tempVec.X, tempVec.Y, tempVec.Z - 130.0f), out vScreen_f33t, viewProj, wndMargins, wndSize, W2SType.TypeD3D11);
                                                     if (Components.VisualsComponent.DrawSurvivorBox.Enabled)
                                                     {
                                                         Renderer.DrawFPSBox(vScreen_h3ad, vScreen_f33t, Components.VisualsComponent.SurvColor.Color, BoxStance.standing, Components.VisualsComponent.DrawBoxThic.Value, Components.VisualsComponent.DrawBoxBorder.Enabled);
@@ -421,7 +421,8 @@ namespace DeadByDaylight
 
                                             if (Components.VisualsComponent.DrawGenerators.Enabled)
                                             {
-                                                var retname = GetNameFromID(AActorID);
+                                                if (string.IsNullOrEmpty(retname))
+                                                    continue;
                                                 if (!retname.StartsWith("GeneratorStandard"))
                                                     continue;
                                                 Vector2 vScreen_d3d11 = new Vector2(0, 0);
