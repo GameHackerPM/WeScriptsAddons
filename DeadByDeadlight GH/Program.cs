@@ -423,7 +423,7 @@ namespace DeadByDaylight
                                             {
                                                 if (string.IsNullOrEmpty(retname))
                                                     continue;
-                                                if (!retname.StartsWith("GeneratorStandard"))
+                                                if (!retname.StartsWith("Generator"))
                                                     continue;
                                                 Vector2 vScreen_d3d11 = new Vector2(0, 0);
                                                 if (Renderer.WorldToScreen(tempVec, out vScreen_d3d11, viewProj,
