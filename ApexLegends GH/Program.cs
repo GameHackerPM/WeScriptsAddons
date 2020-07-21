@@ -36,6 +36,11 @@ namespace ApexLegends
         public static IntPtr ViewRenderPtr = IntPtr.Zero;
         public static IntPtr ViewMatrixOffs = IntPtr.Zero;
 
+        public static int WM_KEYDOWN = 0x0100;
+        public static int WM_KEYUP = 0x0101;
+        public static int mySecondsBefore = 0;
+        public static bool shouldpostmsg = false;
+
         public static uint Velocity = 0x140; //vec3
         public static uint Origin = 0x14C; //vec3
         public static uint Shield = 0x170; //int
@@ -60,6 +65,7 @@ namespace ApexLegends
 
         public static List<ItemObj> ItemsCacheList = new List<ItemObj>();
         public static DateTime LastItemsCacheUpdatedDT = DateTime.Now;
+        public static bool UseDriverBypass;
 
         public static Dictionary<int, string> LegendaryStuff = new Dictionary<int, string>
         {
@@ -126,6 +132,7 @@ namespace ApexLegends
         class Components
         {
             public static readonly MenuKeyBind MainAssemblyToggle = new MenuKeyBind("mainassemblytoggle", "Toggle the whole assembly effect by pressing key:", VirtualKeyCode.Delete, KeybindType.Toggle, true);
+            public static readonly MenuBool UseDriverBypassMenu = new MenuBool("userdriverbypass", "  Use Driver Bypass (For Subscribers Only)", true);
             public static class VisualsComponent
             {
                 public static readonly MenuBool DrawTheVisuals = new MenuBool("drawthevisuals", "Enable all of the Visuals", true);
@@ -147,7 +154,7 @@ namespace ApexLegends
                 public static readonly MenuBool AimGlobalBool = new MenuBool("enableaim", "Enable Aimbot Features", true);
                 public static readonly MenuKeyBind AimKey = new MenuKeyBind("aimkey", "Aimbot HotKey (HOLD)", VirtualKeyCode.CapsLock, KeybindType.Hold, false);
                 public static readonly MenuKeyBind AimSpotKey = new MenuKeyBind("aimspotkey", "Aimbot Spot HotKey", VirtualKeyCode.Tab, KeybindType.Hold, false);
-                //public static readonly MenuList AimType = new MenuList("aimtype", "Aimbot Type", new List<string>() { "Direct Engine ViewAngles", "Real Mouse Movement" }, 0);
+                public static readonly MenuList AimType = new MenuList("aimtype", "Aimbot Type", new List<string>() { "Direct Engine ViewAngles", "Real Mouse Movement" }, 0);
                 public static readonly MenuList AimSpot = new MenuList("aimspot", "Aimbot Spot", new List<string>() { "Aim at their Head", "Aim at their Body" }, 0);
                 public static readonly MenuSlider AimSpeed = new MenuSlider("aimspeed", "Aimbot Speed %", 12, 1, 100);
                 public static readonly MenuBool DrawAimSpot = new MenuBool("drawaimspot", "Draw Aimbot Spot", true);
@@ -181,7 +188,7 @@ namespace ApexLegends
                 Components.AimbotComponent.AimGlobalBool,
                 Components.AimbotComponent.AimKey,
                 Components.AimbotComponent.AimSpotKey,
-                //Components.AimbotComponent.AimType,
+                Components.AimbotComponent.AimType,
                 Components.AimbotComponent.AimSpot,
                 Components.AimbotComponent.AimSpeed,
                 Components.AimbotComponent.DrawAimSpot,
@@ -233,9 +240,16 @@ namespace ApexLegends
             foreach (var anItem in ammoItems)
                 ItemsMenu.Add(new MenuBool(anItem.Key.ToString(), anItem.Value, true));
 
+
+            Components.UseDriverBypassMenu.OnValueChanged += (sender, args) =>
+            {
+                UseDriverBypass = args.NewValue;
+            };
+
             RootMenu = new Menu("apexlegendsexample", "WeScript.app Apex Legends Example Assembly", true)
             {
                 Components.MainAssemblyToggle.SetToolTip("The magical boolean which completely disables/enables the assembly!"),
+                WeScript.SDK.Utils.VIP.IsSubscriber() ? (MenuComponent)Components.UseDriverBypassMenu : new MenuSeperator("dummyseparator"),
                 VisualsMenu,
                 AimbotMenu,
                 ItemsMenu
@@ -246,15 +260,20 @@ namespace ApexLegends
 
         static void Main(string[] args)
         {
-            Console.WriteLine("WeScript.app ApexLegends Example Assembly Loaded! - GH With Driver.");
+            Console.WriteLine("WeScript.app ApexLegends Example Assembly Loaded! - GH");
             InitializeMenu();
             Renderer.OnRenderer += OnRenderer;
             Memory.OnTick += OnTick;
 
-            if (!Memory.InitDriver(DriverName.frost_64))
+            if (WeScript.SDK.Utils.VIP.IsSubscriber())
             {
-                Console.WriteLine("[ERROR] Failed to initialize driver for some reason...");
+                if (!Memory.InitDriver(DriverName.frost_64))
+                {
+                    Console.WriteLine("[ERROR] Failed to initialize driver for some reason...");
+                }
             }
+            else
+                Components.UseDriverBypassMenu.Enabled = false;
 
             //Events...
             Components.AimbotComponent.AimSpotKey.OnValueChanged += (sender, e) =>
@@ -265,6 +284,7 @@ namespace ApexLegends
                 int newIndex = (selectedIndex % Components.AimbotComponent.AimSpot.Items.Length - 1 == 0) ? 0 : ++selectedIndex;
                 Components.AimbotComponent.AimSpot.Value = newIndex;
             };
+            UseDriverBypass = Components.UseDriverBypassMenu.Enabled;
         }
 
 
@@ -279,12 +299,12 @@ namespace ApexLegends
             var entity_list = EntityListPtr;
             if (entity_list != IntPtr.Zero)
             {
-                var base_entity = Memory.ZwReadDWORD64(processHandle, entity_list);
+                var base_entity = UseDriverBypass ? Memory.ZwReadDWORD64(processHandle, entity_list) : Memory.ReadDWORD64(processHandle, entity_list);
                 if (base_entity == 0)
                 {
                     return IntPtr.Zero;
                 }
-                var entity_itself = Memory.ZwReadPointer(processHandle, (IntPtr)(entity_list.ToInt64() + (index << 5)), isWow64Process);
+                var entity_itself = UseDriverBypass ? Memory.ZwReadPointer(processHandle, (IntPtr)(entity_list.ToInt64() + (index << 5)), isWow64Process) : Memory.ReadPointer(processHandle, (IntPtr)(entity_list.ToInt64() + (index << 5)), isWow64Process);
                 return entity_itself;
             }
             return IntPtr.Zero;
@@ -358,12 +378,17 @@ namespace ApexLegends
         private static Vector3 ReadBonePos(IntPtr playerPtr, int boneIDX)
         {
             Vector3 targetVec = new Vector3(0, 0, 0);
-            var BoneMatrixPtr = Memory.ZwReadPointer(processHandle, (IntPtr)(playerPtr.ToInt64() + BoneClass), isWow64Process);
+            var BoneMatrixPtr = UseDriverBypass ? Memory.ZwReadPointer(processHandle, (IntPtr)(playerPtr.ToInt64() + BoneClass), isWow64Process) : Memory.ReadPointer(processHandle, (IntPtr)(playerPtr.ToInt64() + BoneClass), isWow64Process);
             if (BoneMatrixPtr != IntPtr.Zero)
             {
-                targetVec.X = Memory.ZwReadFloat(processHandle, (IntPtr)(BoneMatrixPtr.ToInt64() + 0x30 * boneIDX + 0x0C));
-                targetVec.Y = Memory.ZwReadFloat(processHandle, (IntPtr)(BoneMatrixPtr.ToInt64() + 0x30 * boneIDX + 0x1C));
-                targetVec.Z = Memory.ZwReadFloat(processHandle, (IntPtr)(BoneMatrixPtr.ToInt64() + 0x30 * boneIDX + 0x2C));
+                targetVec.X = UseDriverBypass ? Memory.ZwReadFloat(processHandle, (IntPtr)(BoneMatrixPtr.ToInt64() + 0x30 * boneIDX + 0x0C)) :
+                                                Memory.ReadFloat(processHandle, (IntPtr)(BoneMatrixPtr.ToInt64() + 0x30 * boneIDX + 0x0C));
+
+                targetVec.Y = UseDriverBypass ? Memory.ZwReadFloat(processHandle, (IntPtr)(BoneMatrixPtr.ToInt64() + 0x30 * boneIDX + 0x1C)) :
+                                                Memory.ReadFloat(processHandle, (IntPtr)(BoneMatrixPtr.ToInt64() + 0x30 * boneIDX + 0x1C));
+
+                targetVec.Z = UseDriverBypass ? Memory.ZwReadFloat(processHandle, (IntPtr)(BoneMatrixPtr.ToInt64() + 0x30 * boneIDX + 0x2C)) :
+                                                Memory.ReadFloat(processHandle, (IntPtr)(BoneMatrixPtr.ToInt64() + 0x30 * boneIDX + 0x2C));
             }
             return targetVec;
         }
@@ -412,7 +437,35 @@ namespace ApexLegends
 
             return tmp;
         }
+        public static void SendMessageToOrigin()
+        {
+            var originPID = Memory.GetPIDForProcess("Origin.exe");
+            if (originPID > 0)
+            {
+                IntPtr originWindow = Memory.FindMainWindow(originPID);
+                //Console.WriteLine($"OriginWindow: {originWindow.ToString()}");
+                Input.SetFocusWS(originWindow);
+                Input.SetForegroundWindowWS(originWindow);
+                Input.KeyDown(VirtualKeyCode.Alt);
+                Input.KeyPress(VirtualKeyCode.O);
+                Input.KeyPress(VirtualKeyCode.G);
+                Input.KeyUp(VirtualKeyCode.Alt);
+                Input.SleepWS(500);
+                Input.SetFocusWS(originWindow);
+                Input.SetForegroundWindowWS(originWindow);
+                Input.KeyDown(VirtualKeyCode.Alt);
+                Input.KeyPress(VirtualKeyCode.O);
+                Input.KeyPress(VirtualKeyCode.G);
+                Input.KeyUp(VirtualKeyCode.Alt);
+                Input.KeyPress(VirtualKeyCode.Alt); //to unstuck the key ... if possible
+                Input.SleepWS(500);
+                IntPtr gameWindowz = Memory.FindWindowClassName("Respawn001");
+                Input.SetFocusWS(gameWindowz);
+                Input.SetForegroundWindowWS(gameWindowz);
 
+            }
+
+        }
 
         private static void OnTick(int counter, EventArgs args)
         {
@@ -425,7 +478,7 @@ namespace ApexLegends
                     var calcPid = Memory.GetPIDFromHWND(wndHnd); //get the PID of that same process
                     if (calcPid > 0) //if we got the PID
                     {
-                        processHandle = Memory.ZwOpenProcess(PROCESS_ALL_ACCESS, calcPid); //the driver will get a stripped handle, but doesn't matter, it's still OK
+                        processHandle = UseDriverBypass ? Memory.ZwOpenProcess(PROCESS_ALL_ACCESS, calcPid) : Memory.OpenProcess(PROCESS_ALL_ACCESS, calcPid); //the driver will get a stripped handle, but doesn't matter, it's still OK
                         if (processHandle != IntPtr.Zero)
                         {
                             //if we got access to the game, check if it's x64 bit, this is needed when reading pointers, since their size is 4 for x86 and 8 for x64
@@ -453,13 +506,13 @@ namespace ApexLegends
 
                     if (GameBase == IntPtr.Zero) //do we have access to Gamebase address?
                     {
-                        GameBase = Memory.ZwGetModule(processHandle, null, isWow64Process); //if not, find it
+                        GameBase = UseDriverBypass ? Memory.ZwGetModule(processHandle, null, isWow64Process) : Memory.GetModule(processHandle, null, isWow64Process); //if not, find it
                     }
                     else
                     {
                         if (GameSize == IntPtr.Zero)
                         {
-                            GameSize = Memory.ZwGetModuleSize(processHandle, null, isWow64Process);
+                            GameSize = UseDriverBypass ? Memory.ZwGetModuleSize(processHandle, null, isWow64Process) : Memory.GetModuleSize(processHandle, null, isWow64Process);
                         }
                         else
                         {
@@ -467,19 +520,31 @@ namespace ApexLegends
                             //Console.WriteLine($"GameSize: {GameSize.ToString("X")}"); //easy way to check if we got reading rights
                             if (EntityListPtr == IntPtr.Zero)
                             {
-                                EntityListPtr = (IntPtr)(GameBase.ToInt64() + 0x175EC28);//EntityListPtr = Memory.FindSignature(processHandle, GameBase, GameSize, "0F B7 C8 48 8D 05 ? ? ? ? 48 C1 E1 05 48 03 C8", 0x6);
+                                EntityListPtr = UseDriverBypass ? (IntPtr)(GameBase.ToInt64() + 0x175EC28) :
+                                    Memory.FindSignature(processHandle, GameBase, GameSize, "0F B7 C8 48 8D 05 ? ? ? ? 48 C1 E1 05 48 03 C8", 0x6);
                             }
                             if (LocalPlayerPtr == IntPtr.Zero)
                             {
-                                LocalPlayerPtr = (IntPtr)(GameBase.ToInt64() + 0x1B0D448);//LocalPlayerIDPtr = Memory.FindSignature(processHandle, GameBase, GameSize, "83 3D ? ? ? ? ? 74 ? 0F B7 0D", 0x2);
+                                LocalPlayerPtr = UseDriverBypass ? (IntPtr)(GameBase.ToInt64() + 0x1B0D448) :
+                                    Memory.FindSignature(processHandle, GameBase, GameSize, "48 8B 05 ? ? ? ? 48 0F 44 C7 48 89 05", 0x3);
                             }
                             if (ViewRenderPtr == IntPtr.Zero)
                             {
-                                ViewRenderPtr = (IntPtr)(GameBase.ToInt64() + 0x3F5C2C0);//ViewRenderPtr = Memory.FindSignature(processHandle, GameBase, GameSize, "48 8B 0D ? ? ? ? 44 0F 28 C2", 0x3);
+                                ViewRenderPtr = UseDriverBypass ? (IntPtr)(GameBase.ToInt64() + 0x3F5C2C0) :
+                                    Memory.FindSignature(processHandle, GameBase, GameSize, "48 8B 0D ? ? ? ? 44 0F 28 C2", 0x3);
                             }
                             if (ViewMatrixOffs == IntPtr.Zero)
                             {
-                                ViewMatrixOffs = (IntPtr)0x1B3BD0;//ViewMatrixOffs = Memory.FindSignature(processHandle, GameBase, GameSize, "48 89 AB ? ? ? ? 4C 89 9B", 0x3, true);
+                                ViewMatrixOffs = UseDriverBypass ? (IntPtr)0x1B3BD0 :
+                                    Memory.FindSignature(processHandle, GameBase, GameSize, "48 89 AB ? ? ? ? 4C 89 9B", 0x3, true);
+                            }
+                            if (isGameOnTop)
+                            {
+                                if (shouldpostmsg)
+                                {
+                                    shouldpostmsg = false;
+                                    SendMessageToOrigin();
+                                }
                             }
                         }
                     }
@@ -501,9 +566,9 @@ namespace ApexLegends
             }
         }
 
-        //public static ulong timeWithLP = 0;
-        //public static ulong timeWithoutLP = 0;
-        //public static ulong timeToPlayWithoutDC = 87000; //about minute and half, with 3 seconds to reconnect
+        public static ulong timeWithLP = 0;
+        public static ulong timeWithoutLP = 0;
+        public static ulong timeToPlayWithoutDC = 87000; //about minute and half, with 3 seconds to reconnect
 
         private static void OnRenderer(int fps, EventArgs args)
         {
@@ -511,21 +576,39 @@ namespace ApexLegends
             if ((!isGameOnTop) && (!isOverlayOnTop)) return; //if game and overlay are not on top, don't draw
             if (!Components.MainAssemblyToggle.Enabled) return; //main menu boolean to toggle the cheat on or off
 
-            //if ((timeWithLP > 0) && (timeWithLP < timeToPlayWithoutDC))
-            //{
-            //    var secondsLeft = (timeToPlayWithoutDC - timeWithLP) / 1000;
-            //    if (Components.VisualsComponent.DrawTimeLeft.Enabled)
-            //    {
-            //        if (secondsLeft < 15)
-            //        {
-            //            Renderer.DrawText($"!! {secondsLeft.ToString()} !!", GameCenterPos.X, GameCenterPos.Y + (GameCenterPos.Y / 2), new Color(255, 0, 0), 72, TextAlignment.centered);
-            //        }
-            //        else
-            //        {
-            //            Renderer.DrawText(secondsLeft.ToString(), GameCenterPos.X, GameCenterPos.Y + (GameCenterPos.Y / 2), new Color(255, 255, 255), 40, TextAlignment.centered);
-            //        }
-            //    }
-            //}
+            if ((timeWithLP > 0) && (timeWithLP < timeToPlayWithoutDC))
+            {
+                var secondsLeft = (timeToPlayWithoutDC - timeWithLP) / 1000;
+
+                //if (Components.MiscComponent.SupportInChat.Enabled)
+                {
+                    if (secondsLeft == 5)
+                    {
+                        if (mySecondsBefore == 0)
+                        {
+                            mySecondsBefore = 5;
+                            shouldpostmsg = true;
+                        }
+                    }
+                    else
+                    {
+                        mySecondsBefore = 0;
+                    }
+                }
+
+
+                if (Components.VisualsComponent.DrawTimeLeft.Enabled)
+                {
+                    if (secondsLeft < 15)
+                    {
+                        Renderer.DrawText($"!! {secondsLeft.ToString()} !!", GameCenterPos.X, GameCenterPos.Y + (GameCenterPos.Y / 2), new Color(255, 0, 0), 72, TextAlignment.centered);
+                    }
+                    else
+                    {
+                        Renderer.DrawText(secondsLeft.ToString(), GameCenterPos.X, GameCenterPos.Y + (GameCenterPos.Y / 2), new Color(255, 255, 255), 40, TextAlignment.centered);
+                    }
+                }
+            }
 
             double fClosestPos = 999999;
             AimTarg2D = new Vector2(0, 0);
@@ -533,31 +616,31 @@ namespace ApexLegends
 
             if ((ViewRenderPtr != IntPtr.Zero) && (ViewMatrixOffs != IntPtr.Zero))
             {
-                var matPtr0 = Memory.ZwReadPointer(processHandle, (IntPtr)(ViewRenderPtr.ToInt64()), isWow64Process);
+                var matPtr0 = UseDriverBypass ? Memory.ZwReadPointer(processHandle, (IntPtr)(ViewRenderPtr.ToInt64()), isWow64Process) : Memory.ReadPointer(processHandle, (IntPtr)(ViewRenderPtr.ToInt64()), isWow64Process);
                 if (matPtr0 != IntPtr.Zero)
                 {
-                    var matptr1 = Memory.ZwReadPointer(processHandle, (IntPtr)(matPtr0.ToInt64() + ViewMatrixOffs.ToInt64()), isWow64Process);
+                    var matptr1 = UseDriverBypass ? Memory.ZwReadPointer(processHandle, (IntPtr)(matPtr0.ToInt64() + ViewMatrixOffs.ToInt64()), isWow64Process) : Memory.ReadPointer(processHandle, (IntPtr)(matPtr0.ToInt64() + ViewMatrixOffs.ToInt64()), isWow64Process);
                     if (matptr1 != IntPtr.Zero)
                     {
-                        var matrix = Memory.ZwReadMatrix(processHandle, matptr1);
-                        var localPlayer = Memory.ZwReadPointer(processHandle, LocalPlayerPtr, isWow64Process);
+                        var matrix = UseDriverBypass ? Memory.ZwReadMatrix(processHandle, matptr1) : Memory.ReadMatrix(processHandle, matptr1);
+                        var localPlayer = UseDriverBypass ? Memory.ZwReadPointer(processHandle, LocalPlayerPtr, isWow64Process) : Memory.ReadPointer(processHandle, LocalPlayerPtr, isWow64Process);
                         if (localPlayer != IntPtr.Zero)
                         {
-                            //timeWithLP = Memory.TickCount - timeWithoutLP;
+                            timeWithLP = Memory.TickCount - timeWithoutLP;
 
-                            var myCameraPos = Memory.ZwReadVector3(processHandle, (IntPtr)(localPlayer.ToInt64() + CameraPosition));
-                            var StaticAngles = Memory.ZwReadVector3(processHandle, (IntPtr)(localPlayer.ToInt64() + AnglesStatic));
-                            var WritableAngles = Memory.ZwReadVector3(processHandle, (IntPtr)(localPlayer.ToInt64() + ViewAngles));
-                            var myPos = Memory.ZwReadVector3(processHandle, (IntPtr)(localPlayer.ToInt64() + Origin));
-                            var myTeam = Memory.ZwReadInt32(processHandle, (IntPtr)(localPlayer.ToInt64() + Team));
+                            var myCameraPos = UseDriverBypass ? Memory.ZwReadVector3(processHandle, (IntPtr)(localPlayer.ToInt64() + CameraPosition)) : Memory.ReadVector3(processHandle, (IntPtr)(localPlayer.ToInt64() + CameraPosition));
+                            var StaticAngles = UseDriverBypass ? Memory.ZwReadVector3(processHandle, (IntPtr)(localPlayer.ToInt64() + AnglesStatic)) : Memory.ReadVector3(processHandle, (IntPtr)(localPlayer.ToInt64() + AnglesStatic));
+                            var WritableAngles = UseDriverBypass ? Memory.ZwReadVector3(processHandle, (IntPtr)(localPlayer.ToInt64() + ViewAngles)) : Memory.ReadVector3(processHandle, (IntPtr)(localPlayer.ToInt64() + ViewAngles));
+                            var myPos = UseDriverBypass ? Memory.ZwReadVector3(processHandle, (IntPtr)(localPlayer.ToInt64() + Origin)) : Memory.ReadVector3(processHandle, (IntPtr)(localPlayer.ToInt64() + Origin));
+                            var myTeam = UseDriverBypass ? Memory.ZwReadInt32(processHandle, (IntPtr)(localPlayer.ToInt64() + Team)) : Memory.ReadInt32(processHandle, (IntPtr)(localPlayer.ToInt64() + Team));
                             //var myHP = Memory.ReadInt32(processHandle, (IntPtr)(localPlayer.ToInt64() + Health));
-                            var wepHnd = Memory.ZwReadUInt32(processHandle, (IntPtr)(localPlayer.ToInt64() + m_latestPrimaryWeapons));
+                            var wepHnd = UseDriverBypass ? Memory.ZwReadUInt32(processHandle, (IntPtr)(localPlayer.ToInt64() + m_latestPrimaryWeapons)) : Memory.ReadUInt32(processHandle, (IntPtr)(localPlayer.ToInt64() + m_latestPrimaryWeapons));
                             var weaponIndex = wepHnd & 0xFFFF;
                             var weaponPtr = GetEntityByIndex(processHandle, weaponIndex);
                             float bulletSpeed = 999999999.0f;
                             if (weaponPtr != IntPtr.Zero)
                             {
-                                bulletSpeed = Memory.ZwReadFloat(processHandle, (IntPtr)(weaponPtr.ToInt64() + BulletSpeed));
+                                bulletSpeed = UseDriverBypass ? Memory.ZwReadFloat(processHandle, (IntPtr)(weaponPtr.ToInt64() + BulletSpeed)) : Memory.ReadFloat(processHandle, (IntPtr)(weaponPtr.ToInt64() + BulletSpeed));
                             }
 
                             Vector2 radarCenterPos = new Vector2(425f, 175f);
@@ -583,18 +666,17 @@ namespace ApexLegends
                                 var entity = GetEntityByIndex(processHandle, i);
                                 if ((entity != IntPtr.Zero) && (localPlayer != entity))
                                 {
-                                    var entTeam = Memory.ZwReadInt32(processHandle, (IntPtr)(entity.ToInt64() + Team));
+                                    var entTeam = UseDriverBypass ? Memory.ZwReadInt32(processHandle, (IntPtr)(entity.ToInt64() + Team)) : Memory.ReadInt32(processHandle, (IntPtr)(entity.ToInt64() + Team));
                                     if (entTeam == myTeam) continue;
-                                    var entHP = Memory.ZwReadInt32(processHandle, (IntPtr)(entity.ToInt64() + Health));
-                                    var entHPMAX = Memory.ZwReadInt32(processHandle, (IntPtr)(entity.ToInt64() + MaxHealth));
-                                    var ent_Type_Str = Memory.ZwReadString(processHandle, (IntPtr)(entity.ToInt64() + EntityTypeStr), false);
+                                    var entHP = UseDriverBypass ? Memory.ZwReadInt32(processHandle, (IntPtr)(entity.ToInt64() + Health)) : Memory.ReadInt32(processHandle, (IntPtr)(entity.ToInt64() + Health));
+                                    var entHPMAX = UseDriverBypass ? Memory.ZwReadInt32(processHandle, (IntPtr)(entity.ToInt64() + MaxHealth)) : Memory.ReadInt32(processHandle, (IntPtr)(entity.ToInt64() + MaxHealth));
+                                    var ent_Type_Str = UseDriverBypass ? Memory.ZwReadString(processHandle, (IntPtr)(entity.ToInt64() + EntityTypeStr), false) : Memory.ReadString(processHandle, (IntPtr)(entity.ToInt64() + EntityTypeStr), false);
                                     if (Components.VisualsComponent.DrawItems.Enabled && itemsCacheNeedUpdate && ent_Type_Str != "player")
                                     {
-                                        var itemPos = Memory.ZwReadVector3(processHandle, (IntPtr)(entity.ToInt64() + Origin));
+                                        var itemPos = UseDriverBypass ? Memory.ZwReadVector3(processHandle, (IntPtr)(entity.ToInt64() + Origin)) : Memory.ReadVector3(processHandle, (IntPtr)(entity.ToInt64() + Origin));
                                         //if (itemPos.Z < 0)
                                         //    continue;
-                                        var itemId = Memory.ZwReadInt32(processHandle,
-                                            (IntPtr)(entity.ToInt64() + ItemId));
+                                        var itemId = UseDriverBypass ? Memory.ZwReadInt32(processHandle, (IntPtr)(entity.ToInt64() + ItemId)) : Memory.ReadInt32(processHandle, (IntPtr)(entity.ToInt64() + ItemId));
 
                                         if (!itemsMenuComponentDic.ContainsKey(itemId.ToString()) || !itemsMenuComponentDic[itemId.ToString()].Enabled)
                                             continue;
@@ -610,7 +692,7 @@ namespace ApexLegends
                                     if ((entHP > 0) && (entHPMAX > 0))
                                     {
                                         if (ent_Type_Str != "player") continue;
-                                        var entPos = Memory.ZwReadVector3(processHandle, (IntPtr)(entity.ToInt64() + Origin));
+                                        var entPos = UseDriverBypass ? Memory.ZwReadVector3(processHandle, (IntPtr)(entity.ToInt64() + Origin)) : Memory.ReadVector3(processHandle, (IntPtr)(entity.ToInt64() + Origin));
                                         var dist = GetDistance3D(myPos, entPos);
                                         if (dist > Components.VisualsComponent.ESPRendDist.Value) continue;
 
@@ -631,11 +713,11 @@ namespace ApexLegends
                                         Vector2 vScreen_head = new Vector2(0, 0);
                                         if (Renderer.WorldToScreen(entPos, out vScreen_feet, matrix, wndMargins, wndSize, W2SType.TypeD3D9))
                                         {
-                                            var entShield = Memory.ZwReadInt32(processHandle, (IntPtr)(entity.ToInt64() + Shield));
-                                            var entShieldMax = Memory.ZwReadInt32(processHandle, (IntPtr)(entity.ToInt64() + MaxShield));
+                                            var entShield = UseDriverBypass ? Memory.ZwReadInt32(processHandle, (IntPtr)(entity.ToInt64() + Shield)) : Memory.ReadInt32(processHandle, (IntPtr)(entity.ToInt64() + Shield));
+                                            var entShieldMax = UseDriverBypass ? Memory.ZwReadInt32(processHandle, (IntPtr)(entity.ToInt64() + MaxShield)) : Memory.ReadInt32(processHandle, (IntPtr)(entity.ToInt64() + MaxShield));
                                             //var bleedOutState = Memory.ReadInt32(processHandle, (IntPtr)(entity.ToInt64() + BleedOutState));
-                                            var boundingBox = Memory.ZwReadVector3(processHandle, (IntPtr)(entity.ToInt64() + BoundingBox));
-                                            var entVelocity = Memory.ZwReadVector3(processHandle, (IntPtr)(entity.ToInt64() + Velocity));
+                                            var boundingBox = UseDriverBypass ? Memory.ZwReadVector3(processHandle, (IntPtr)(entity.ToInt64() + BoundingBox)) : Memory.ReadVector3(processHandle, (IntPtr)(entity.ToInt64() + BoundingBox));
+                                            var entVelocity = UseDriverBypass ? Memory.ZwReadVector3(processHandle, (IntPtr)(entity.ToInt64() + Velocity)) : Memory.ReadVector3(processHandle, (IntPtr)(entity.ToInt64() + Velocity));
                                             var ent_bone = ReadBonePos(entity, 12);//bone for head
                                             var ent_HeadPosBOX = new Vector3(entPos.X + ent_bone.X, entPos.Y + ent_bone.Y, entPos.Z + ent_bone.Z + 2.0f);
                                             Renderer.WorldToScreen(ent_HeadPosBOX, out vScreen_head, matrix, wndMargins, wndSize, W2SType.TypeD3D9);
@@ -702,7 +784,7 @@ namespace ApexLegends
                                 foreach (var item in ItemsCacheList)
                                 {
                                     var dist = GetDistance3D(myPos, item.ItemPosV3);
-                                    
+
                                     if (dist < (Components.VisualsComponent.ESPRendDist.Value / 4))//(dist < (Components.VisualsComponent.ESPRendDist.Value / 4))
                                     {
                                         if (Renderer.WorldToScreen(item.ItemPosV3, out itemPosVec, matrix, wndMargins,
@@ -807,7 +889,7 @@ namespace ApexLegends
                                     if (Components.AimbotComponent.AimKey.Enabled)
                                     {
                                         //switch (Components.AimbotComponent.AimType.Value)
-                                        uint forceto1 = 1;
+                                        uint forceto1 = UseDriverBypass ? 1 : (uint)Components.AimbotComponent.AimType.Value;
                                         switch (forceto1)
                                         {
                                             case 0: //engine viewangles
@@ -863,7 +945,7 @@ namespace ApexLegends
                         }
                         else
                         {
-                            //timeWithoutLP = Memory.TickCount;
+                            timeWithoutLP = Memory.TickCount;
                         }
                     }
                 }
