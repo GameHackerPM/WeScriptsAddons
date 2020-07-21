@@ -240,11 +240,14 @@ namespace DeadByDaylight
             Matrix viewProj = new Matrix();
             var myPos = new Vector3();
             var USkillCheck = IntPtr.Zero;
+            var ADBDGameState = IntPtr.Zero;
             var UWorld = Memory.ZwReadPointer(processHandle, (IntPtr)GameBase.ToInt64() + 0x5D72BB8, isWow64Process); //48 8B 1D ?? ?? ?? ?? 48 85 DB 74 3B 41 || mov rbx,[DeadByDaylight-Win64-Shipping.exe+5A29158]
             try
             {
                 if (UWorld != IntPtr.Zero)
                 {
+                    ADBDGameState =
+                        Memory.ZwReadPointer(processHandle, (IntPtr)UWorld.ToInt64() + 0x130, isWow64Process);
                     var UGameInstance = Memory.ZwReadPointer(processHandle, (IntPtr)UWorld.ToInt64() + 0x170, isWow64Process);
                     if (UGameInstance != IntPtr.Zero)
                     {
@@ -281,6 +284,53 @@ namespace DeadByDaylight
                             }
                         }
                     }
+
+                    if (ADBDGameState != IntPtr.Zero)
+                    {
+                        if (Components.VisualsComponent.DrawGenerators.Enabled)
+                        {
+                            var generatorsArray = Memory.ZwReadPointer(processHandle,
+                                (IntPtr) ADBDGameState.ToInt64() + 0x0640, isWow64Process);
+                            var generatorsCnt = Memory.ZwReadInt32(processHandle,
+                                (IntPtr) ADBDGameState.ToInt64() + 0x0648);
+                            for (int i = 0; i < generatorsCnt; i++)
+                            {
+                                var firstGenerator = Memory.ZwReadPointer(processHandle,
+                                    (IntPtr)(generatorsArray.ToInt64() + i * 8), isWow64Process);
+
+                                if (firstGenerator != IntPtr.Zero)
+                                {
+                                    var USceneComponent = Memory.ZwReadPointer(processHandle,
+                                        (IntPtr)firstGenerator.ToInt64() + 0x168, isWow64Process);
+                                    var tempVec = Memory.ZwReadVector3(processHandle,
+                                        (IntPtr)USceneComponent.ToInt64() + 0x160);
+
+                                    var isRepaired =
+                                        Memory.ZwReadBool(processHandle, (IntPtr)firstGenerator.ToInt64() + 0x3C9);
+                                    var isBlocked = Memory.ZwReadBool(processHandle,
+                                        (IntPtr)firstGenerator.ToInt64() + 0x47C);
+
+                                    var currentProgressPercent = Memory.ZwReadFloat(processHandle, (IntPtr)firstGenerator.ToInt64() + 0x03D8) * 100;
+                                    int dist = (int)(GetDistance3D(myPos, tempVec));
+                                    Color selectedColor;
+                                    if (isBlocked)
+                                        selectedColor = Color.Red;
+                                    else if (isRepaired)
+                                        selectedColor = Color.Green;
+                                    else
+                                        selectedColor = Color.Yellow;
+                                    Vector2 vScreen_d3d11 = new Vector2(0, 0);
+                                    if (Renderer.WorldToScreen(tempVec, out vScreen_d3d11, viewProj,
+                                        wndMargins, wndSize, W2SType.TypeD3D11))
+                                    {
+                                        Renderer.DrawText(
+                                            $"Generator [{dist}m] ({currentProgressPercent:##0}%)", vScreen_d3d11,
+                                            selectedColor, 15, TextAlignment.centered, false);
+                                    }
+                                }
+                            }
+                        }
+                    }
                     var ULevel = Memory.ZwReadPointer(processHandle, (IntPtr)UWorld.ToInt64() + 0x38, isWow64Process);
                     if (ULevel != IntPtr.Zero)
                     {
@@ -290,38 +340,47 @@ namespace DeadByDaylight
                         {
                             for (uint i = 0; i <= ActorCnt; i++)
                             {
-                                var AActor = Memory.ZwReadPointer(processHandle, (IntPtr)(AActors.ToInt64() + i * 8), isWow64Process);
+                                var AActor = Memory.ZwReadPointer(processHandle, (IntPtr)(AActors.ToInt64() + i * 8),
+                                    isWow64Process);
                                 if (AActor != IntPtr.Zero)
                                 {
-                                    var USceneComponent = Memory.ZwReadPointer(processHandle, (IntPtr)AActor.ToInt64() + 0x168, isWow64Process);
+                                    var USceneComponent = Memory.ZwReadPointer(processHandle,
+                                        (IntPtr)AActor.ToInt64() + 0x168, isWow64Process);
                                     if (USceneComponent != IntPtr.Zero)
                                     {
-                                        var tempVec = Memory.ZwReadVector3(processHandle, (IntPtr)USceneComponent.ToInt64() + 0x160);
-                                        var AActorID = Memory.ZwReadUInt32(processHandle, (IntPtr)AActor.ToInt64() + 0x18);
+                                        var tempVec = Memory.ZwReadVector3(processHandle,
+                                            (IntPtr)USceneComponent.ToInt64() + 0x160);
+                                        var AActorID = Memory.ZwReadUInt32(processHandle,
+                                            (IntPtr)AActor.ToInt64() + 0x18);
                                         var retname = "";
                                         if ((AActorID > 0) && (AActorID < 200000))
                                         {
                                             retname = GetNameFromID(AActorID);
-                                            if ((survivorID == 0) || (killerID == 0) || (escapeID == 0) || (hatchID == 0))
+                                            if ((survivorID == 0) || (killerID == 0) || (escapeID == 0) ||
+                                                (hatchID == 0))
                                             {
 
                                                 if (retname.Contains("BP_CamperInteractable_"))
                                                 {
                                                     survivorID = AActorID;
                                                 }
+
                                                 if (retname.Contains("SlasherInteractable_"))
                                                 {
                                                     killerID = AActorID;
                                                 }
+
                                                 if (retname.Contains("BP_Escape01"))
                                                 {
                                                     escapeID = AActorID;
                                                 }
+
                                                 if (retname.Contains("BP_Hatch"))
                                                 {
                                                     hatchID = AActorID;
                                                 }
                                             }
+
                                             //the check below is a ghetto way to "guess" the ID of players and killers using a slider in the menu
                                             //Vector2 vScreen_d3d11 = new Vector2(0, 0);
                                             //if ((AActorID >= 160000 + (Components.VisualsComponent.OffsetGuesser.Value * 10)) && (AActorID <= 160100 + (Components.VisualsComponent.OffsetGuesser.Value * 10)))
@@ -353,11 +412,15 @@ namespace DeadByDaylight
                                         {
                                             if (USkillCheck != IntPtr.Zero)
                                             {
-                                                var isDisplayed = Memory.ZwReadBool(processHandle, (IntPtr)USkillCheck.ToInt64() + 0x0308);
-                                                if (isDisplayed && LastSpacePressedDT.AddMilliseconds(200) < DateTime.Now)
+                                                var isDisplayed = Memory.ZwReadBool(processHandle,
+                                                    (IntPtr)USkillCheck.ToInt64() + 0x0308);
+                                                if (isDisplayed && LastSpacePressedDT.AddMilliseconds(200) <
+                                                    DateTime.Now)
                                                 {
-                                                    var currentProgress = Memory.ZwReadFloat(processHandle, (IntPtr)USkillCheck.ToInt64() + 0x02A0);
-                                                    var startSuccessZone = Memory.ZwReadFloat(processHandle, (IntPtr)USkillCheck.ToInt64() + 0x0270);
+                                                    var currentProgress = Memory.ZwReadFloat(processHandle,
+                                                        (IntPtr)USkillCheck.ToInt64() + 0x02A0);
+                                                    var startSuccessZone = Memory.ZwReadFloat(processHandle,
+                                                        (IntPtr)USkillCheck.ToInt64() + 0x0270);
 
                                                     if (currentProgress > startSuccessZone)
                                                     {
@@ -368,69 +431,87 @@ namespace DeadByDaylight
                                             }
                                         }
 
-                                        if (Components.VisualsComponent.DrawTheVisuals.Enabled) //this should have been placed earlier?
+                                        if (Components.VisualsComponent.DrawTheVisuals.Enabled
+                                        ) //this should have been placed earlier?
                                         {
                                             int dist = (int)(GetDistance3D(myPos, tempVec));
                                             if (AActorID == survivorID)
                                             {
                                                 Vector2 vScreen_h3ad = new Vector2(0, 0);
                                                 Vector2 vScreen_f33t = new Vector2(0, 0);
-                                                if (Renderer.WorldToScreen(new Vector3(tempVec.X, tempVec.Y, tempVec.Z + 60.0f), out vScreen_h3ad, viewProj, wndMargins, wndSize, W2SType.TypeD3D11))
+                                                if (Renderer.WorldToScreen(
+                                                    new Vector3(tempVec.X, tempVec.Y, tempVec.Z + 60.0f),
+                                                    out vScreen_h3ad, viewProj, wndMargins, wndSize, W2SType.TypeD3D11))
                                                 {
-                                                    Renderer.WorldToScreen(new Vector3(tempVec.X, tempVec.Y, tempVec.Z - 130.0f), out vScreen_f33t, viewProj, wndMargins, wndSize, W2SType.TypeD3D11);
+                                                    Renderer.WorldToScreen(
+                                                        new Vector3(tempVec.X, tempVec.Y, tempVec.Z - 130.0f),
+                                                        out vScreen_f33t, viewProj, wndMargins, wndSize,
+                                                        W2SType.TypeD3D11);
                                                     if (Components.VisualsComponent.DrawSurvivorBox.Enabled)
                                                     {
-                                                        Renderer.DrawFPSBox(vScreen_h3ad, vScreen_f33t, Components.VisualsComponent.SurvColor.Color, BoxStance.standing, Components.VisualsComponent.DrawBoxThic.Value, Components.VisualsComponent.DrawBoxBorder.Enabled);
-                                                        Renderer.DrawText("SURVIVOR [" + dist + "m]", vScreen_f33t.X, vScreen_f33t.Y + 5, Components.VisualsComponent.SurvColor.Color, 12, TextAlignment.centered, false);
+                                                        Renderer.DrawFPSBox(vScreen_h3ad, vScreen_f33t,
+                                                            Components.VisualsComponent.SurvColor.Color,
+                                                            BoxStance.standing,
+                                                            Components.VisualsComponent.DrawBoxThic.Value,
+                                                            Components.VisualsComponent.DrawBoxBorder.Enabled);
+                                                        Renderer.DrawText("SURVIVOR [" + dist + "m]", vScreen_f33t.X,
+                                                            vScreen_f33t.Y + 5,
+                                                            Components.VisualsComponent.SurvColor.Color, 12,
+                                                            TextAlignment.centered, false);
                                                     }
                                                 }
                                             }
+
                                             if (AActorID == killerID)
                                             {
                                                 Vector2 vScreen_h3ad = new Vector2(0, 0);
                                                 Vector2 vScreen_f33t = new Vector2(0, 0);
-                                                if (Renderer.WorldToScreen(new Vector3(tempVec.X, tempVec.Y, tempVec.Z + 80.0f), out vScreen_h3ad, viewProj, wndMargins, wndSize, W2SType.TypeD3D11))
+                                                if (Renderer.WorldToScreen(
+                                                    new Vector3(tempVec.X, tempVec.Y, tempVec.Z + 80.0f),
+                                                    out vScreen_h3ad, viewProj, wndMargins, wndSize, W2SType.TypeD3D11))
                                                 {
-                                                    Renderer.WorldToScreen(new Vector3(tempVec.X, tempVec.Y, tempVec.Z - 150.0f), out vScreen_f33t, viewProj, wndMargins, wndSize, W2SType.TypeD3D11);
+                                                    Renderer.WorldToScreen(
+                                                        new Vector3(tempVec.X, tempVec.Y, tempVec.Z - 150.0f),
+                                                        out vScreen_f33t, viewProj, wndMargins, wndSize,
+                                                        W2SType.TypeD3D11);
                                                     if (Components.VisualsComponent.DrawKillerBox.Enabled)
                                                     {
-                                                        Renderer.DrawFPSBox(vScreen_h3ad, vScreen_f33t, Components.VisualsComponent.KillerColor.Color, BoxStance.standing, Components.VisualsComponent.DrawBoxThic.Value, Components.VisualsComponent.DrawBoxBorder.Enabled);
-                                                        Renderer.DrawText("KILLER [" + dist + "m]", vScreen_f33t.X, vScreen_f33t.Y + 5, Components.VisualsComponent.KillerColor.Color, 12, TextAlignment.centered, false);
+                                                        Renderer.DrawFPSBox(vScreen_h3ad, vScreen_f33t,
+                                                            Components.VisualsComponent.KillerColor.Color,
+                                                            BoxStance.standing,
+                                                            Components.VisualsComponent.DrawBoxThic.Value,
+                                                            Components.VisualsComponent.DrawBoxBorder.Enabled);
+                                                        Renderer.DrawText("KILLER [" + dist + "m]", vScreen_f33t.X,
+                                                            vScreen_f33t.Y + 5,
+                                                            Components.VisualsComponent.KillerColor.Color, 12,
+                                                            TextAlignment.centered, false);
                                                     }
                                                 }
                                             }
+
                                             if (Components.VisualsComponent.DrawMiscInfo.Enabled)
                                             {
                                                 if (AActorID == escapeID)
                                                 {
                                                     Vector2 vScreen_d3d11 = new Vector2(0, 0);
-                                                    if (Renderer.WorldToScreen(tempVec, out vScreen_d3d11, viewProj, wndMargins, wndSize, W2SType.TypeD3D11))
+                                                    if (Renderer.WorldToScreen(tempVec, out vScreen_d3d11, viewProj,
+                                                        wndMargins, wndSize, W2SType.TypeD3D11))
                                                     {
-                                                        Renderer.DrawText("ESCAPE [" + dist + "m]", vScreen_d3d11, Components.VisualsComponent.MiscColor.Color, 12, TextAlignment.centered, false);
+                                                        Renderer.DrawText("ESCAPE [" + dist + "m]", vScreen_d3d11,
+                                                            Components.VisualsComponent.MiscColor.Color, 12,
+                                                            TextAlignment.centered, false);
                                                     }
                                                 }
                                                 else if (AActorID == hatchID)
                                                 {
                                                     Vector2 vScreen_d3d11 = new Vector2(0, 0);
-                                                    if (Renderer.WorldToScreen(tempVec, out vScreen_d3d11, viewProj, wndMargins, wndSize, W2SType.TypeD3D11))
+                                                    if (Renderer.WorldToScreen(tempVec, out vScreen_d3d11, viewProj,
+                                                        wndMargins, wndSize, W2SType.TypeD3D11))
                                                     {
-                                                        Renderer.DrawText("HATCH [" + dist + "m]", vScreen_d3d11, Components.VisualsComponent.MiscColor.Color, 12, TextAlignment.centered, false);
+                                                        Renderer.DrawText("HATCH [" + dist + "m]", vScreen_d3d11,
+                                                            Components.VisualsComponent.MiscColor.Color, 12,
+                                                            TextAlignment.centered, false);
                                                     }
-                                                }
-                                            }
-
-                                            if (Components.VisualsComponent.DrawGenerators.Enabled)
-                                            {
-                                                if (string.IsNullOrEmpty(retname))
-                                                    continue;
-                                                if (!retname.StartsWith("Generator"))
-                                                    continue;
-                                                Vector2 vScreen_d3d11 = new Vector2(0, 0);
-                                                if (Renderer.WorldToScreen(tempVec, out vScreen_d3d11, viewProj,
-                                                    wndMargins, wndSize, W2SType.TypeD3D11))
-                                                {
-                                                    Renderer.DrawText("Generator [" + dist + "m]", vScreen_d3d11,
-                                                        Color.Green, 14, TextAlignment.centered, false);
                                                 }
                                             }
                                         }
