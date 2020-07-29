@@ -36,6 +36,8 @@ namespace DeadByDaylight
         public static uint killerID = 0;
         public static uint escapeID = 0;
         public static uint hatchID = 0;
+        public static uint generatorID = 0;
+        public static List<uint> GeneratorsIDsList = null;
 
 
         public static Menu RootMenu { get; private set; }
@@ -244,14 +246,11 @@ namespace DeadByDaylight
             //Matrix viewProj = new Matrix();
             var myPos = new Vector3();
             var USkillCheck = IntPtr.Zero;
-            var ADBDGameState = IntPtr.Zero;
             var UWorld = Memory.ZwReadPointer(processHandle, (IntPtr)GameBase.ToInt64() + 0x6164908, isWow64Process); //48 8B 1D ?? ?? ?? ?? 48 85 DB 74 3B 41 || mov rbx,[DeadByDaylight-Win64-Shipping.exe+5A29158]
             try
             {
                 if (UWorld != IntPtr.Zero)
                 {
-                    ADBDGameState =
-                        Memory.ZwReadPointer(processHandle, (IntPtr)(UWorld.ToInt64() + 0x0130), isWow64Process);
                     var UGameInstance = Memory.ZwReadPointer(processHandle, (IntPtr)UWorld.ToInt64() + 0x170, isWow64Process);
                     if (UGameInstance != IntPtr.Zero)
                     {
@@ -292,52 +291,6 @@ namespace DeadByDaylight
                                 //{
                                 //    viewProj = Memory.ZwReadMatrix(processHandle, (IntPtr)(CameraPtr.ToInt64() + 0x1FC));
                                 //}
-                            }
-                        }
-                    }
-                    if (ADBDGameState != IntPtr.Zero)
-                    {
-                        if (Components.VisualsComponent.DrawGenerators.Enabled)
-                        {
-                            var generatorsArray = Memory.ZwReadPointer(processHandle,
-                                (IntPtr) ADBDGameState.ToInt64() + 0x0658, isWow64Process);
-                            var generatorsCnt = Memory.ZwReadInt32(processHandle,
-                                (IntPtr) ADBDGameState.ToInt64() + 0x0660);
-                            for (int i = 0; i < generatorsCnt; i++)
-                            {
-                                var aGenerator = Memory.ZwReadPointer(processHandle,
-                                    (IntPtr)(generatorsArray.ToInt64() + i * 8), isWow64Process);
-
-                                if (aGenerator != IntPtr.Zero)
-                                {
-                                    var USceneComponent = Memory.ZwReadPointer(processHandle,
-                                        (IntPtr)aGenerator.ToInt64() + 0x168, isWow64Process);
-                                    var tempVec = Memory.ZwReadVector3(processHandle,
-                                        (IntPtr)USceneComponent.ToInt64() + 0x160);
-
-                                    var isRepaired =
-                                        Memory.ZwReadBool(processHandle, (IntPtr)aGenerator.ToInt64() + 0x03D1);
-                                    var isBlocked = Memory.ZwReadBool(processHandle,
-                                        (IntPtr)aGenerator.ToInt64() + 0x0494);
-
-                                    var currentProgressPercent = Memory.ZwReadFloat(processHandle, (IntPtr)aGenerator.ToInt64() + 0x03E0) * 100;
-                                    int dist = (int)(GetDistance3D(myPos, tempVec));
-                                    Color selectedColor;
-                                    if (isBlocked)
-                                        selectedColor = Color.Red;
-                                    else if (isRepaired)
-                                        selectedColor = Color.Green;
-                                    else
-                                        selectedColor = Color.Yellow;
-                                    Vector2 vScreen_d3d11 = new Vector2(0, 0);
-                                    if (Renderer.WorldToScreenUE4(tempVec, out vScreen_d3d11, FMinimalViewInfo_Location, FMinimalViewInfo_Rotation, FMinimalViewInfo_FOV,
-                                        wndMargins, wndSize))
-                                    {
-                                        Renderer.DrawText(
-                                            $"Generator [{dist}m] ({currentProgressPercent:##0}%)", vScreen_d3d11,
-                                            selectedColor, 15, TextAlignment.centered, false);
-                                    }
-                                }
                             }
                         }
                     }
@@ -384,14 +337,14 @@ namespace DeadByDaylight
                                             (IntPtr)USceneComponent.ToInt64() + 0x160);
                                         var AActorID = Memory.ZwReadUInt32(processHandle,
                                             (IntPtr)AActor.ToInt64() + 0x18);
-                                        var retname = "";
+
                                         if ((AActorID > 0) && (AActorID < 200000))
                                         {
-                                            retname = GetNameFromID(AActorID);
                                             if ((survivorID == 0) || (killerID == 0) || (escapeID == 0) ||
-                                                (hatchID == 0))
+                                                (hatchID == 0) || (generatorID == 0))
                                             {
 
+                                                var retname = GetNameFromID(AActorID);
                                                 if (retname.Contains("BP_CamperInteractable_"))
                                                 {
                                                     survivorID = AActorID;
@@ -411,6 +364,9 @@ namespace DeadByDaylight
                                                 {
                                                     hatchID = AActorID;
                                                 }
+
+                                                if (retname.StartsWith("Generator"))
+                                                    generatorID = AActorID;
                                             }
 
                                             //the check below is a ghetto way to "guess" the ID of players and killers using a slider in the menu
@@ -522,16 +478,16 @@ namespace DeadByDaylight
                                                 }
                                             }
 
-                                            if (Components.VisualsComponent.DrawGenerators.Enabled && false)
+                                            if (Components.VisualsComponent.DrawGenerators.Enabled)
                                             {
-                                                if (!retname.StartsWith("Generator"))
+                                                if (AActorID != generatorID)
                                                     continue;
                                                 var isRepaired =
-                                                    Memory.ZwReadBool(processHandle, (IntPtr)AActor.ToInt64() + 0x3C9);
+                                                    Memory.ZwReadBool(processHandle, (IntPtr)AActor.ToInt64() + 0x03D1);
                                                 var isBlocked = Memory.ZwReadBool(processHandle,
-                                                    (IntPtr)AActor.ToInt64() + 0x47C);
+                                                    (IntPtr)AActor.ToInt64() + 0x0494);
 
-                                                var currentProgressPercent = Memory.ZwReadFloat(processHandle, (IntPtr)AActor.ToInt64() + 0x03D8) * 100;
+                                                var currentProgressPercent = Memory.ZwReadFloat(processHandle, (IntPtr)AActor.ToInt64() + 0x03E0) * 100;
                                                 Color selectedColor;
                                                 if (isBlocked)
                                                     selectedColor = Color.Red;
