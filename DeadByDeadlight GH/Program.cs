@@ -27,6 +27,8 @@ namespace DeadByDaylight
         public static IntPtr GameBase = IntPtr.Zero;
         public static IntPtr GameSize = IntPtr.Zero;
         public static DateTime LastSpacePressedDT = DateTime.Now;
+        public static IntPtr GWorldPtr = IntPtr.Zero;
+        public static IntPtr GNamesPtr = IntPtr.Zero;
 
         public static Vector3 FMinimalViewInfo_Location = new Vector3(0, 0, 0);
         public static Vector3 FMinimalViewInfo_Rotation = new Vector3(0, 0, 0);
@@ -37,7 +39,6 @@ namespace DeadByDaylight
         public static uint escapeID = 0;
         public static uint hatchID = 0;
         public static uint generatorID = 0;
-        public static List<uint> GeneratorsIDsList = null;
 
 
         public static Menu RootMenu { get; private set; }
@@ -107,26 +108,9 @@ namespace DeadByDaylight
             {
                 if (GameBase != IntPtr.Zero)
                 {
-                    var GNamesAddress = Memory.ZwReadPointer(processHandle, (IntPtr)(GameBase.ToInt64() + 0x0602A548), isWow64Process); //48 8B 05 ? ? ? ? 48 85 C0 75 5F
+                    var GNamesAddress = Memory.ZwReadPointer(processHandle, GNamesPtr, isWow64Process); //48 8B 05 ? ? ? ? 48 85 C0 75 5F
                     if (GNamesAddress != IntPtr.Zero)
                     {
-                        //for (uint i = 0; i <= 12; i++)
-                        //{
-                        //    var firstChunk = Memory.ReadPointer(processHandle, (IntPtr)(GNamesAddress.ToInt64() + i * 8), isWow64Process);
-                        //    if (firstChunk != IntPtr.Zero)
-                        //    {
-                        //        var fNamePtr = Memory.ReadPointer(processHandle, (IntPtr)(firstChunk.ToInt64() + (ID / 0x4000) * 8), isWow64Process);
-                        //        if (fNamePtr != IntPtr.Zero)
-                        //        {
-                        //            var fName = Memory.ReadPointer(processHandle, (IntPtr)(fNamePtr.ToInt64() + 8 * (ID % 0x4000)), isWow64Process);
-                        //            if (fName != IntPtr.Zero)
-                        //            {
-                        //                var name = Memory.ReadString(processHandle, (IntPtr)fName.ToInt64() + 0xC, true, 64);
-                        //                if (name.Length > 0) return name;
-                        //            }
-                        //        }
-                        //    }
-                        //}
                         UInt64 ChunkIndex = ID / 0x4000;
                         UInt64 WithinChunkIndex = ID % 0x4000;
                         var fNamePtr = Memory.ZwReadPointer(processHandle, (IntPtr)(GNamesAddress.ToInt64() + (long)ChunkIndex * 0x8), isWow64Process);
@@ -198,9 +182,6 @@ namespace DeadByDaylight
                     isGameOnTop = Renderer.IsGameOnTop(wndHnd);
                     isOverlayOnTop = Overlay.IsOnTop();
 
-                    //var kernelbase = Memory.ZwReadPointer(processHandle, (IntPtr)0x77500000, isWow64Process);
-                    //Console.WriteLine($"77500000: {kernelbase.ToString("X")}");
-
                     if (GameBase == IntPtr.Zero) //do we have access to Gamebase address?
                     {
                         GameBase = Memory.ZwGetModule(processHandle, null, isWow64Process); //if not, find it
@@ -216,9 +197,16 @@ namespace DeadByDaylight
                         }
                         else
                         {
-                            //uncomment to spam it every frame
-                            //Console.WriteLine($"GameBase: {GameBase.ToString("X")}"); //easy way to check if we got reading rights
-                            //Console.WriteLine($"GameSize: {GameSize.ToString("X")}"); //easy way to check if we got reading rights
+                            if (GWorldPtr == IntPtr.Zero)
+                            {
+                                GWorldPtr = Memory.ZwFindSignature(processHandle, GameBase, GameSize, "48 8B 1D ? ? ? ? 48 85 DB 74 3B 41", 0x3);
+                                Console.WriteLine($"GWorldPtr: {GWorldPtr.ToString("X")}");
+                            }
+                            if (GNamesPtr == IntPtr.Zero)
+                            {
+                                GNamesPtr = Memory.ZwFindSignature(processHandle, GameBase, GameSize, "48 8B 05 ? ? ? ? 48 85 C0 75 5F", 0x3);
+                                Console.WriteLine($"GNamesPtr: {GNamesPtr.ToString("X")}");
+                            }
                         }
                     }
 
@@ -231,6 +219,10 @@ namespace DeadByDaylight
                     //clear your offsets, modules
                     GameBase = IntPtr.Zero;
                     GameSize = IntPtr.Zero;
+
+                    GWorldPtr = IntPtr.Zero;
+                    GNamesPtr = IntPtr.Zero;
+
                 }
             }
         }
@@ -246,263 +238,294 @@ namespace DeadByDaylight
             //Matrix viewProj = new Matrix();
             var myPos = new Vector3();
             var USkillCheck = IntPtr.Zero;
-            var UWorld = Memory.ZwReadPointer(processHandle, (IntPtr)GameBase.ToInt64() + 0x6164908, isWow64Process); //48 8B 1D ?? ?? ?? ?? 48 85 DB 74 3B 41 || mov rbx,[DeadByDaylight-Win64-Shipping.exe+5A29158]
-            try
+            var UWorld =
+                Memory.ZwReadPointer(processHandle, GWorldPtr,
+                    isWow64Process); //48 8B 1D ?? ?? ?? ?? 48 85 DB 74 3B 41 || mov rbx,[DeadByDaylight-Win64-Shipping.exe+5A29158]
+            if (UWorld != IntPtr.Zero)
             {
-                if (UWorld != IntPtr.Zero)
+                var UGameInstance =
+                    Memory.ZwReadPointer(processHandle, (IntPtr) UWorld.ToInt64() + 0x170, isWow64Process);
+                if (UGameInstance != IntPtr.Zero)
                 {
-                    var UGameInstance = Memory.ZwReadPointer(processHandle, (IntPtr)UWorld.ToInt64() + 0x170, isWow64Process);
-                    if (UGameInstance != IntPtr.Zero)
+                    var localPlayerArray = Memory.ZwReadPointer(processHandle, (IntPtr) UGameInstance.ToInt64() + 0x40,
+                        isWow64Process);
+                    if (localPlayerArray != IntPtr.Zero)
                     {
-                        var localPlayerArray = Memory.ZwReadPointer(processHandle, (IntPtr)UGameInstance.ToInt64() + 0x40, isWow64Process);
-                        if (localPlayerArray != IntPtr.Zero)
+                        var ULocalPlayer = Memory.ZwReadPointer(processHandle, localPlayerArray, isWow64Process);
+                        if (ULocalPlayer != IntPtr.Zero)
                         {
-                            var ULocalPlayer = Memory.ZwReadPointer(processHandle, localPlayerArray, isWow64Process);
-                            if (ULocalPlayer != IntPtr.Zero)
+                            var ULocalPlayerControler = Memory.ZwReadPointer(processHandle,
+                                (IntPtr) ULocalPlayer.ToInt64() + 0x0038, isWow64Process);
+                            if (ULocalPlayerControler != IntPtr.Zero)
                             {
-                                var ULocalPlayerControler = Memory.ZwReadPointer(processHandle, (IntPtr)ULocalPlayer.ToInt64() + 0x0038, isWow64Process);
-                                if (ULocalPlayerControler != IntPtr.Zero)
+                                var ULocalPlayerPawn = Memory.ZwReadPointer(processHandle,
+                                    (IntPtr) ULocalPlayerControler.ToInt64() + 0x0378, isWow64Process);
+                                if (ULocalPlayerPawn != IntPtr.Zero)
                                 {
-                                    var ULocalPlayerPawn = Memory.ZwReadPointer(processHandle, (IntPtr)ULocalPlayerControler.ToInt64() + 0x0378, isWow64Process);
-                                    if (ULocalPlayerPawn != IntPtr.Zero)
-                                    {
-                                        var UInteractionHandler = Memory.ZwReadPointer(processHandle, (IntPtr)ULocalPlayerPawn.ToInt64() + 0x0BF0, isWow64Process);
+                                    var UInteractionHandler = Memory.ZwReadPointer(processHandle,
+                                        (IntPtr) ULocalPlayerPawn.ToInt64() + 0x0BF0, isWow64Process);
 
-                                        if (UInteractionHandler != IntPtr.Zero)
-                                        {
-                                            USkillCheck = Memory.ZwReadPointer(processHandle, (IntPtr)UInteractionHandler.ToInt64() + 0x0278, isWow64Process);
-                                        }
-                                        var ULocalRoot = Memory.ZwReadPointer(processHandle, (IntPtr)ULocalPlayerPawn.ToInt64() + 0x0168, isWow64Process);
-                                        if (ULocalRoot != IntPtr.Zero)
-                                        {
-                                            myPos = Memory.ZwReadVector3(processHandle, (IntPtr)ULocalRoot.ToInt64() + 0x017C);
-                                        }
-                                    }
-                                    var APlayerCameraManager = Memory.ZwReadPointer(processHandle, (IntPtr)ULocalPlayerControler.ToInt64() + 0x3E0, isWow64Process);
-                                    if (APlayerCameraManager != IntPtr.Zero)
+                                    if (UInteractionHandler != IntPtr.Zero)
                                     {
-                                        FMinimalViewInfo_Location = Memory.ZwReadVector3(processHandle, (IntPtr)APlayerCameraManager.ToInt64() + 0x1A30 + 0x0010);
-                                        FMinimalViewInfo_Rotation = Memory.ZwReadVector3(processHandle, (IntPtr)APlayerCameraManager.ToInt64() + 0x1A30 + 0x001C);
-                                        FMinimalViewInfo_FOV = Memory.ZwReadFloat(processHandle, (IntPtr)APlayerCameraManager.ToInt64() + 0x1A30 + 0x0028);
+                                        USkillCheck = Memory.ZwReadPointer(processHandle,
+                                            (IntPtr) UInteractionHandler.ToInt64() + 0x0278, isWow64Process);
+                                    }
+
+                                    var ULocalRoot = Memory.ZwReadPointer(processHandle,
+                                        (IntPtr) ULocalPlayerPawn.ToInt64() + 0x0168, isWow64Process);
+                                    if (ULocalRoot != IntPtr.Zero)
+                                    {
+                                        myPos = Memory.ZwReadVector3(processHandle,
+                                            (IntPtr) ULocalRoot.ToInt64() + 0x017C);
                                     }
                                 }
-                                //var CameraPtr = Memory.ZwReadPointer(processHandle, (IntPtr)ULocalPlayer.ToInt64() + 0xB8, isWow64Process);
-                                //if (CameraPtr != IntPtr.Zero)
-                                //{
-                                //    viewProj = Memory.ZwReadMatrix(processHandle, (IntPtr)(CameraPtr.ToInt64() + 0x1FC));
-                                //}
+
+                                var APlayerCameraManager = Memory.ZwReadPointer(processHandle,
+                                    (IntPtr) ULocalPlayerControler.ToInt64() + 0x3E0, isWow64Process);
+                                if (APlayerCameraManager != IntPtr.Zero)
+                                {
+                                    FMinimalViewInfo_Location = Memory.ZwReadVector3(processHandle,
+                                        (IntPtr) APlayerCameraManager.ToInt64() + 0x1A30 + 0x0010);
+                                    FMinimalViewInfo_Rotation = Memory.ZwReadVector3(processHandle,
+                                        (IntPtr) APlayerCameraManager.ToInt64() + 0x1A30 + 0x001C);
+                                    FMinimalViewInfo_FOV = Memory.ZwReadFloat(processHandle,
+                                        (IntPtr) APlayerCameraManager.ToInt64() + 0x1A30 + 0x0028);
+                                }
+                            }
+
+                            //var CameraPtr = Memory.ZwReadPointer(processHandle, (IntPtr)ULocalPlayer.ToInt64() + 0xB8, isWow64Process);
+                            //if (CameraPtr != IntPtr.Zero)
+                            //{
+                            //    viewProj = Memory.ZwReadMatrix(processHandle, (IntPtr)(CameraPtr.ToInt64() + 0x1FC));
+                            //}
+                        }
+                    }
+                }
+
+                if (Components.MiscComponent.AutoSkillCheck.Enabled)
+                {
+                    if (USkillCheck != IntPtr.Zero)
+                    {
+                        var isDisplayed = Memory.ZwReadBool(processHandle,
+                            (IntPtr) USkillCheck.ToInt64() + 0x0308);
+                        if (isDisplayed && LastSpacePressedDT.AddMilliseconds(200) <
+                            DateTime.Now)
+                        {
+                            var currentProgress = Memory.ZwReadFloat(processHandle,
+                                (IntPtr) USkillCheck.ToInt64() + 0x02A0);
+                            var startSuccessZone = Memory.ZwReadFloat(processHandle,
+                                (IntPtr) USkillCheck.ToInt64() + 0x0270);
+
+                            if (currentProgress > startSuccessZone)
+                            {
+                                LastSpacePressedDT = DateTime.Now;
+                                Input.KeyPress(VirtualKeyCode.Space);
                             }
                         }
                     }
-                    if (Components.MiscComponent.AutoSkillCheck.Enabled)
-                    {
-                        if (USkillCheck != IntPtr.Zero)
-                        {
-                            var isDisplayed = Memory.ZwReadBool(processHandle,
-                                (IntPtr)USkillCheck.ToInt64() + 0x0308);
-                            if (isDisplayed && LastSpacePressedDT.AddMilliseconds(200) <
-                                DateTime.Now)
-                            {
-                                var currentProgress = Memory.ZwReadFloat(processHandle,
-                                    (IntPtr)USkillCheck.ToInt64() + 0x02A0);
-                                var startSuccessZone = Memory.ZwReadFloat(processHandle,
-                                    (IntPtr)USkillCheck.ToInt64() + 0x0270);
+                }
 
-                                if (currentProgress > startSuccessZone)
-                                {
-                                    LastSpacePressedDT = DateTime.Now;
-                                    Input.KeyPress(VirtualKeyCode.Space);
-                                }
-                            }
-                        }
-                    }
-                    var ULevel = Memory.ZwReadPointer(processHandle, (IntPtr)UWorld.ToInt64() + 0x38, isWow64Process);
-                    if (ULevel != IntPtr.Zero)
+                var ULevel = Memory.ZwReadPointer(processHandle, (IntPtr) UWorld.ToInt64() + 0x38, isWow64Process);
+                if (ULevel != IntPtr.Zero)
+                {
+                    var AActors = Memory.ZwReadPointer(processHandle, (IntPtr) ULevel.ToInt64() + 0xA0, isWow64Process);
+                    var ActorCnt = Memory.ZwReadUInt32(processHandle, (IntPtr) ULevel.ToInt64() + 0xA8);
+                    if ((AActors != IntPtr.Zero) && (ActorCnt > 0))
                     {
-                        var AActors = Memory.ZwReadPointer(processHandle, (IntPtr)ULevel.ToInt64() + 0xA0, isWow64Process);
-                        var ActorCnt = Memory.ZwReadUInt32(processHandle, (IntPtr)ULevel.ToInt64() + 0xA8);
-                        if ((AActors != IntPtr.Zero) && (ActorCnt > 0))
+                        for (uint i = 0; i <= ActorCnt; i++)
                         {
-                            for (uint i = 0; i <= ActorCnt; i++)
+                            var AActor = Memory.ZwReadPointer(processHandle, (IntPtr) (AActors.ToInt64() + i * 8),
+                                isWow64Process);
+                            if (AActor != IntPtr.Zero)
                             {
-                                var AActor = Memory.ZwReadPointer(processHandle, (IntPtr)(AActors.ToInt64() + i * 8),
-                                    isWow64Process);
-                                if (AActor != IntPtr.Zero)
+                                var USceneComponent = Memory.ZwReadPointer(processHandle,
+                                    (IntPtr) AActor.ToInt64() + 0x168, isWow64Process);
+                                if (USceneComponent != IntPtr.Zero)
                                 {
-                                    var USceneComponent = Memory.ZwReadPointer(processHandle,
-                                        (IntPtr)AActor.ToInt64() + 0x168, isWow64Process);
-                                    if (USceneComponent != IntPtr.Zero)
+                                    var tempVec = Memory.ZwReadVector3(processHandle,
+                                        (IntPtr) USceneComponent.ToInt64() + 0x160);
+                                    var AActorID = Memory.ZwReadUInt32(processHandle,
+                                        (IntPtr) AActor.ToInt64() + 0x18);
+
+                                    if ((AActorID > 0) && (AActorID < 200000))
                                     {
-                                        var tempVec = Memory.ZwReadVector3(processHandle,
-                                            (IntPtr)USceneComponent.ToInt64() + 0x160);
-                                        var AActorID = Memory.ZwReadUInt32(processHandle,
-                                            (IntPtr)AActor.ToInt64() + 0x18);
-
-                                        if ((AActorID > 0) && (AActorID < 200000))
+                                        if ((survivorID == 0) || (killerID == 0) || (escapeID == 0) ||
+                                            (hatchID == 0) || (generatorID == 0))
                                         {
-                                            if ((survivorID == 0) || (killerID == 0) || (escapeID == 0) ||
-                                                (hatchID == 0) || (generatorID == 0))
+
+                                            var retname = GetNameFromID(AActorID);
+                                            if (retname.Contains("BP_CamperInteractable_"))
                                             {
-
-                                                var retname = GetNameFromID(AActorID);
-                                                if (retname.Contains("BP_CamperInteractable_"))
-                                                {
-                                                    survivorID = AActorID;
-                                                }
-
-                                                if (retname.Contains("SlasherInteractable_"))
-                                                {
-                                                    killerID = AActorID;
-                                                }
-
-                                                if (retname.Contains("BP_Escape01"))
-                                                {
-                                                    escapeID = AActorID;
-                                                }
-
-                                                if (retname.Contains("BP_Hatch"))
-                                                {
-                                                    hatchID = AActorID;
-                                                }
-
-                                                if (retname.StartsWith("Generator"))
-                                                    generatorID = AActorID;
+                                                survivorID = AActorID;
                                             }
 
-                                            //the check below is a ghetto way to "guess" the ID of players and killers using a slider in the menu
-                                            //Vector2 vScreen_d3d11 = new Vector2(0, 0);
-                                            //if ((AActorID >= 160000 + (Components.VisualsComponent.OffsetGuesser.Value * 10)) && (AActorID <= 160100 + (Components.VisualsComponent.OffsetGuesser.Value * 10)))
-                                            //{
-                                            //    if (Renderer.WorldToScreen(tempVec, out vScreen_d3d11, viewProj, wndMargins, wndSize, W2SType.TypeD3D11))
-                                            //    {
-                                            //        //Renderer.DrawText($"ID: {AActorID.ToString()}", vScreen_d3d11, new Color(255, 255, 255), 12, TextAlignment.centered, false);
-                                            //        var gnm = GetNameFromID(AActorID);
-                                            //        if (gnm != "NULL")
-                                            //        {
-                                            //            Renderer.DrawText($"ID: {AActorID.ToString()} {gnm}" , vScreen_d3d11, Color.White, 12, TextAlignment.centered, false);
-                                            //        }
-                                            //    }
-                                            //}
-                                            //var gnm = GetNameFromID(AActorID);
-                                            //{
-                                            //    if ((gnm.Contains("BP_Hatch")) || (gnm.Contains("Generator")) || (gnm.Contains("BP_Escape01")))
-                                            //    {
-                                            //        Vector2 vScreen_d3d11 = new Vector2(0, 0);
-                                            //        if (Renderer.WorldToScreen(tempVec, out vScreen_d3d11, viewProj, wndMargins, wndSize, W2SType.TypeD3D11))
-                                            //        {
-                                            //            Renderer.DrawText(gnm, vScreen_d3d11, Color.White, 12, TextAlignment.centered, false);
-                                            //        }
-                                            //    }
-                                            //}
+                                            if (retname.Contains("SlasherInteractable_"))
+                                            {
+                                                killerID = AActorID;
+                                            }
+
+                                            if (retname.Contains("BP_Escape01"))
+                                            {
+                                                escapeID = AActorID;
+                                            }
+
+                                            if (retname.Contains("BP_Hatch"))
+                                            {
+                                                hatchID = AActorID;
+                                            }
+
+                                            if (retname.StartsWith("Generator"))
+                                                generatorID = AActorID;
                                         }
 
-                                        if (Components.VisualsComponent.DrawTheVisuals.Enabled
-                                        ) //this should have been placed earlier?
+                                        //the check below is a ghetto way to "guess" the ID of players and killers using a slider in the menu
+                                        //Vector2 vScreen_d3d11 = new Vector2(0, 0);
+                                        //if ((AActorID >= 160000 + (Components.VisualsComponent.OffsetGuesser.Value * 10)) && (AActorID <= 160100 + (Components.VisualsComponent.OffsetGuesser.Value * 10)))
+                                        //{
+                                        //    if (Renderer.WorldToScreen(tempVec, out vScreen_d3d11, viewProj, wndMargins, wndSize, W2SType.TypeD3D11))
+                                        //    {
+                                        //        //Renderer.DrawText($"ID: {AActorID.ToString()}", vScreen_d3d11, new Color(255, 255, 255), 12, TextAlignment.centered, false);
+                                        //        var gnm = GetNameFromID(AActorID);
+                                        //        if (gnm != "NULL")
+                                        //        {
+                                        //            Renderer.DrawText($"ID: {AActorID.ToString()} {gnm}" , vScreen_d3d11, Color.White, 12, TextAlignment.centered, false);
+                                        //        }
+                                        //    }
+                                        //}
+                                        //var gnm = GetNameFromID(AActorID);
+                                        //{
+                                        //    if ((gnm.Contains("BP_Hatch")) || (gnm.Contains("Generator")) || (gnm.Contains("BP_Escape01")))
+                                        //    {
+                                        //        Vector2 vScreen_d3d11 = new Vector2(0, 0);
+                                        //        if (Renderer.WorldToScreen(tempVec, out vScreen_d3d11, viewProj, wndMargins, wndSize, W2SType.TypeD3D11))
+                                        //        {
+                                        //            Renderer.DrawText(gnm, vScreen_d3d11, Color.White, 12, TextAlignment.centered, false);
+                                        //        }
+                                        //    }
+                                        //}
+                                    }
+
+                                    if (Components.VisualsComponent.DrawTheVisuals.Enabled
+                                    ) //this should have been placed earlier?
+                                    {
+                                        int dist = (int) (GetDistance3D(myPos, tempVec));
+                                        if (AActorID == survivorID)
                                         {
-                                            int dist = (int)(GetDistance3D(myPos, tempVec));
-                                            if (AActorID == survivorID)
+                                            Vector2 vScreen_h3ad = new Vector2(0, 0);
+                                            Vector2 vScreen_f33t = new Vector2(0, 0);
+                                            if (Renderer.WorldToScreenUE4(
+                                                new Vector3(tempVec.X, tempVec.Y, tempVec.Z + 60.0f),
+                                                out vScreen_h3ad, FMinimalViewInfo_Location, FMinimalViewInfo_Rotation,
+                                                FMinimalViewInfo_FOV, wndMargins, wndSize))
                                             {
-                                                Vector2 vScreen_h3ad = new Vector2(0, 0);
-                                                Vector2 vScreen_f33t = new Vector2(0, 0);
-                                                if (Renderer.WorldToScreenUE4(
-                                                    new Vector3(tempVec.X, tempVec.Y, tempVec.Z + 60.0f),
-                                                    out vScreen_h3ad, FMinimalViewInfo_Location, FMinimalViewInfo_Rotation, FMinimalViewInfo_FOV, wndMargins, wndSize))
+                                                Renderer.WorldToScreenUE4(
+                                                    new Vector3(tempVec.X, tempVec.Y, tempVec.Z - 130.0f),
+                                                    out vScreen_f33t, FMinimalViewInfo_Location,
+                                                    FMinimalViewInfo_Rotation, FMinimalViewInfo_FOV, wndMargins,
+                                                    wndSize);
+                                                if (Components.VisualsComponent.DrawSurvivorBox.Enabled)
                                                 {
-                                                    Renderer.WorldToScreenUE4(
-                                                        new Vector3(tempVec.X, tempVec.Y, tempVec.Z - 130.0f),
-                                                        out vScreen_f33t, FMinimalViewInfo_Location, FMinimalViewInfo_Rotation, FMinimalViewInfo_FOV, wndMargins, wndSize);
-                                                    if (Components.VisualsComponent.DrawSurvivorBox.Enabled)
-                                                    {
-                                                        Renderer.DrawFPSBox(vScreen_h3ad, vScreen_f33t,
-                                                            Components.VisualsComponent.SurvColor.Color,
-                                                            BoxStance.standing,
-                                                            Components.VisualsComponent.DrawBoxThic.Value,
-                                                            Components.VisualsComponent.DrawBoxBorder.Enabled);
-                                                        Renderer.DrawText("SURVIVOR [" + dist + "m]", vScreen_f33t.X,
-                                                            vScreen_f33t.Y + 5,
-                                                            Components.VisualsComponent.SurvColor.Color, 12,
-                                                            TextAlignment.centered, false);
-                                                    }
+                                                    Renderer.DrawFPSBox(vScreen_h3ad, vScreen_f33t,
+                                                        Components.VisualsComponent.SurvColor.Color,
+                                                        BoxStance.standing,
+                                                        Components.VisualsComponent.DrawBoxThic.Value,
+                                                        Components.VisualsComponent.DrawBoxBorder.Enabled);
+                                                    Renderer.DrawText("SURVIVOR [" + dist + "m]", vScreen_f33t.X,
+                                                        vScreen_f33t.Y + 5,
+                                                        Components.VisualsComponent.SurvColor.Color, 12,
+                                                        TextAlignment.centered, false);
                                                 }
                                             }
+                                        }
 
-                                            if (AActorID == killerID)
+                                        if (AActorID == killerID)
+                                        {
+                                            Vector2 vScreen_h3ad = new Vector2(0, 0);
+                                            Vector2 vScreen_f33t = new Vector2(0, 0);
+                                            if (Renderer.WorldToScreenUE4(
+                                                new Vector3(tempVec.X, tempVec.Y, tempVec.Z + 80.0f),
+                                                out vScreen_h3ad, FMinimalViewInfo_Location, FMinimalViewInfo_Rotation,
+                                                FMinimalViewInfo_FOV, wndMargins, wndSize))
                                             {
-                                                Vector2 vScreen_h3ad = new Vector2(0, 0);
-                                                Vector2 vScreen_f33t = new Vector2(0, 0);
-                                                if (Renderer.WorldToScreenUE4(
-                                                    new Vector3(tempVec.X, tempVec.Y, tempVec.Z + 80.0f),
-                                                    out vScreen_h3ad, FMinimalViewInfo_Location, FMinimalViewInfo_Rotation, FMinimalViewInfo_FOV, wndMargins, wndSize))
+                                                Renderer.WorldToScreenUE4(
+                                                    new Vector3(tempVec.X, tempVec.Y, tempVec.Z - 150.0f),
+                                                    out vScreen_f33t, FMinimalViewInfo_Location,
+                                                    FMinimalViewInfo_Rotation, FMinimalViewInfo_FOV, wndMargins,
+                                                    wndSize);
+                                                if (Components.VisualsComponent.DrawKillerBox.Enabled)
                                                 {
-                                                    Renderer.WorldToScreenUE4(
-                                                        new Vector3(tempVec.X, tempVec.Y, tempVec.Z - 150.0f),
-                                                        out vScreen_f33t, FMinimalViewInfo_Location, FMinimalViewInfo_Rotation, FMinimalViewInfo_FOV, wndMargins, wndSize);
-                                                    if (Components.VisualsComponent.DrawKillerBox.Enabled)
-                                                    {
-                                                        Renderer.DrawFPSBox(vScreen_h3ad, vScreen_f33t,
-                                                            Components.VisualsComponent.KillerColor.Color,
-                                                            BoxStance.standing,
-                                                            Components.VisualsComponent.DrawBoxThic.Value,
-                                                            Components.VisualsComponent.DrawBoxBorder.Enabled);
-                                                        Renderer.DrawText("KILLER [" + dist + "m]", vScreen_f33t.X,
-                                                            vScreen_f33t.Y + 5,
-                                                            Components.VisualsComponent.KillerColor.Color, 12,
-                                                            TextAlignment.centered, false);
-                                                    }
+                                                    Renderer.DrawFPSBox(vScreen_h3ad, vScreen_f33t,
+                                                        Components.VisualsComponent.KillerColor.Color,
+                                                        BoxStance.standing,
+                                                        Components.VisualsComponent.DrawBoxThic.Value,
+                                                        Components.VisualsComponent.DrawBoxBorder.Enabled);
+                                                    Renderer.DrawText("KILLER [" + dist + "m]", vScreen_f33t.X,
+                                                        vScreen_f33t.Y + 5,
+                                                        Components.VisualsComponent.KillerColor.Color, 12,
+                                                        TextAlignment.centered, false);
                                                 }
                                             }
+                                        }
 
-                                            if (Components.VisualsComponent.DrawMiscInfo.Enabled)
+                                        if (Components.VisualsComponent.DrawMiscInfo.Enabled)
+                                        {
+                                            if (AActorID == escapeID)
                                             {
-                                                if (AActorID == escapeID)
-                                                {
-                                                    Vector2 vScreen_d3d11 = new Vector2(0, 0);
-                                                    if (Renderer.WorldToScreenUE4(tempVec, out vScreen_d3d11, FMinimalViewInfo_Location, FMinimalViewInfo_Rotation, FMinimalViewInfo_FOV,
-                                                        wndMargins, wndSize))
-                                                    {
-                                                        Renderer.DrawText("ESCAPE [" + dist + "m]", vScreen_d3d11,
-                                                            Components.VisualsComponent.MiscColor.Color, 12,
-                                                            TextAlignment.centered, false);
-                                                    }
-                                                }
-                                                else if (AActorID == hatchID)
-                                                {
-                                                    Vector2 vScreen_d3d11 = new Vector2(0, 0);
-                                                    if (Renderer.WorldToScreenUE4(tempVec, out vScreen_d3d11, FMinimalViewInfo_Location, FMinimalViewInfo_Rotation, FMinimalViewInfo_FOV,
-                                                        wndMargins, wndSize))
-                                                    {
-                                                        Renderer.DrawText("HATCH [" + dist + "m]", vScreen_d3d11,
-                                                            Components.VisualsComponent.MiscColor.Color, 12,
-                                                            TextAlignment.centered, false);
-                                                    }
-                                                }
-                                            }
-
-                                            if (Components.VisualsComponent.DrawGenerators.Enabled)
-                                            {
-                                                if (AActorID != generatorID)
-                                                    continue;
-                                                var isRepaired =
-                                                    Memory.ZwReadBool(processHandle, (IntPtr)AActor.ToInt64() + 0x03D1);
-                                                var isBlocked = Memory.ZwReadBool(processHandle,
-                                                    (IntPtr)AActor.ToInt64() + 0x0494);
-
-                                                var currentProgressPercent = Memory.ZwReadFloat(processHandle, (IntPtr)AActor.ToInt64() + 0x03E0) * 100;
-                                                Color selectedColor;
-                                                if (isBlocked)
-                                                    selectedColor = Color.Red;
-                                                else if (isRepaired)
-                                                    selectedColor = Color.Green;
-                                                else
-                                                    selectedColor = Color.Yellow;
                                                 Vector2 vScreen_d3d11 = new Vector2(0, 0);
-                                                if (Renderer.WorldToScreenUE4(tempVec, out vScreen_d3d11, FMinimalViewInfo_Location, FMinimalViewInfo_Rotation, FMinimalViewInfo_FOV,
+                                                if (Renderer.WorldToScreenUE4(tempVec, out vScreen_d3d11,
+                                                    FMinimalViewInfo_Location, FMinimalViewInfo_Rotation,
+                                                    FMinimalViewInfo_FOV,
                                                     wndMargins, wndSize))
                                                 {
-                                                    Renderer.DrawText(
-                                                        $"Generator [{dist}m] ({currentProgressPercent:##0}%)", vScreen_d3d11,
-                                                        selectedColor, 15, TextAlignment.centered, false);
+                                                    Renderer.DrawText("ESCAPE [" + dist + "m]", vScreen_d3d11,
+                                                        Components.VisualsComponent.MiscColor.Color, 12,
+                                                        TextAlignment.centered, false);
                                                 }
+                                            }
+                                            else if (AActorID == hatchID)
+                                            {
+                                                Vector2 vScreen_d3d11 = new Vector2(0, 0);
+                                                if (Renderer.WorldToScreenUE4(tempVec, out vScreen_d3d11,
+                                                    FMinimalViewInfo_Location, FMinimalViewInfo_Rotation,
+                                                    FMinimalViewInfo_FOV,
+                                                    wndMargins, wndSize))
+                                                {
+                                                    Renderer.DrawText("HATCH [" + dist + "m]", vScreen_d3d11,
+                                                        Components.VisualsComponent.MiscColor.Color, 12,
+                                                        TextAlignment.centered, false);
+                                                }
+                                            }
+                                        }
+
+                                        if (Components.VisualsComponent.DrawGenerators.Enabled)
+                                        {
+                                            if (AActorID != generatorID)
+                                                continue;
+                                            var isRepaired =
+                                                Memory.ZwReadBool(processHandle, (IntPtr) AActor.ToInt64() + 0x03D1);
+                                            var isBlocked = Memory.ZwReadBool(processHandle,
+                                                (IntPtr) AActor.ToInt64() + 0x0494);
+
+                                            var currentProgressPercent =
+                                                Memory.ZwReadFloat(processHandle, (IntPtr) AActor.ToInt64() + 0x03E0) *
+                                                100;
+                                            Color selectedColor;
+                                            if (isBlocked)
+                                                selectedColor = Color.Red;
+                                            else if (isRepaired)
+                                                selectedColor = Color.Green;
+                                            else
+                                                selectedColor = Color.Yellow;
+                                            Vector2 vScreen_d3d11 = new Vector2(0, 0);
+                                            if (Renderer.WorldToScreenUE4(tempVec, out vScreen_d3d11,
+                                                FMinimalViewInfo_Location, FMinimalViewInfo_Rotation,
+                                                FMinimalViewInfo_FOV,
+                                                wndMargins, wndSize))
+                                            {
+                                                Renderer.DrawText(
+                                                    $"Generator [{dist}m] ({currentProgressPercent:##0}%)",
+                                                    vScreen_d3d11,
+                                                    selectedColor, 15, TextAlignment.centered, false);
                                             }
                                         }
                                     }
@@ -512,10 +535,7 @@ namespace DeadByDaylight
                     }
                 }
             }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-            }
         }
+    }
     }
 }
