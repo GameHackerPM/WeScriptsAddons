@@ -537,5 +537,4 @@ namespace DeadByDaylight
             }
         }
     }
-    }
 }
