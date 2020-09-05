@@ -11,6 +11,7 @@ using WeScriptWrapper;
 using WeScript.SDK.UI;
 using WeScript.SDK.UI.Components;
 using WeScript.SDK.UI.EventArgs;
+using WeScript.SDK.Utils;
 
 namespace ApexLegends
 {
@@ -41,26 +42,26 @@ namespace ApexLegends
         public static int mySecondsBefore = 0;
         public static bool shouldpostmsg = false;
 
-        public static uint Velocity = 0x140; //vec3
-        public static uint Origin = 0x14C; //vec3
-        public static uint Shield = 0x170; //int
-        public static uint MaxShield = 0x174; //int
-        public static uint Health = 0x3E0; //int
-        public static uint Team = 0x3F0; //int
-        public static uint BoundingBox = 0x474; //vec3
-        public static uint MaxHealth = 0x510; //int
-        public static uint BoneClass = 0xED8; //ptr
-        public static uint EntityTypeStr = 0x521;//0x521; //ptr
-        public static uint ItemId = 0x1548; //ptr
+        public static uint Velocity = 0x140; //vec3 
+        public static uint Origin = 0x14C; //vec3 
+        public static uint Shield = 0x170; //int 
+        public static uint MaxShield = 0x174; //int 
+        public static uint Health = 0x420; //int 
+        public static uint Team = 0x430; //int 
+        public static uint BoundingBox = 0x4B4; //vec3 
+        public static uint MaxHealth = 0x550; //int
+        public static uint BoneClass = 0xF18; //ptr
+        public static uint EntityTypeStr = 0x561;//0x521; //ptr
+        public static uint ItemId = 0x1608; //ptr
 
-        public static uint m_latestPrimaryWeapons = 0x1934; //int
-        public static uint BulletSpeed = 0x1D48; //float
+        public static uint m_latestPrimaryWeapons = 0x1a0c; //int
+        public static uint BulletSpeed = 0x1e08; //float 
 
-        public static uint CameraPosition = 0x1DA4;
-        public static uint CameraAngles = 0x1DB0;
+        public static uint CameraPosition = 0x1e6c;
+        public static uint CameraAngles = 0x1e6c + 0xC;
         //public static uint AimPunch = 0x2300;
-        public static uint AnglesStatic = 0x23B8;
-        public static uint ViewAngles = 0x23C8;
+        public static uint AnglesStatic = 0x24A0 - 0x10;
+        public static uint ViewAngles = 0x24A0;
         //public static uint BleedOutState = 0x2590; //0 = alive; 2 = downed
 
         public static List<ItemObj> ItemsCacheList = new List<ItemObj>();
@@ -70,57 +71,57 @@ namespace ApexLegends
         public static Dictionary<int, string> LegendaryStuff = new Dictionary<int, string>
         {
             {1, "Kraber"},
-            {3, "MASTIFF"},
-            {5, "LSTAR"},
-            {7, "HAVOC"},
+            {2, "MASTIFF"},
+            {4, "LSTAR"},
+            {6, "HAVOC"},
             {8, "DEVOTION"},
-            {85, "Knockdown Shield Level 4"},
-            {89, "Backpack Level 4"},
-            {77, "Body Armor Level 4"},
-            {73, "Helmet Level 4"},
-            {81, "Evo Shield Level 4"},
+            {89, "Knockdown Shield Level 4"},
+            {93, "Backpack Level 4"},
+            {80, "Body Armor Level 4"},
+            {76, "Helmet Level 4"},
+            {85, "Evo Shield Level 4"},
         };
 
         public static Dictionary<int, string> EliteStuff = new Dictionary<int, string>
         {
-            {49, "Wingman"},
-            {37, "R-301"},
-            {84, "Knockdown Shield Level 3"},
-            {88, "Backpack Level 3"},
-            {76, "Body Armor Level 3"},
-            {72, "Helmet Level 3"},
-            {80, "Evo Shield Level 3"},
-            {66, "Med Kit"},
-            {65, "Phoenix"},
+            {52, "Wingman"},
+            {40, "R-301"},
+            {88, "Knockdown Shield Level 3"},
+            {92, "Backpack Level 3"},
+            {79, "Body Armor Level 3"},
+            {75, "Helmet Level 3"},
+            {84, "Evo Shield Level 3"},
+            {69, "Med Kit"},
+            {68, "Phoenix"},
         };
 
         public static Dictionary<int, string> UniqueStuff = new Dictionary<int, string>
         {
-            {11, "Flatline"},
-            {35, "Spitfire"},
-            {25, "R-99"},
-            {19, "G7 Scout"},
-            {15, "Hemlok"},
-            {83, "Knockdown Shield Level 2"},
-            {87, "Backpack Level 2"},
-            {75, "Body Armor Level 2"},
-            {71, "Helmet Level 2"},
-            {79, "Evo Shield Level 2"},
-            {68, "Shield Battery"},
+            {12, "Flatline"},
+            {38, "Spitfire"},
+            {26, "R-99"},
+            {20, "G7 Scout"},
+            {16, "Hemlok"},
+            {87, "Knockdown Shield Level 2"},
+            {91, "Backpack Level 2"},
+            {78, "Body Armor Level 2"},
+            {74, "Helmet Level 2"},
+            {83, "Evo Shield Level 2"},
+            {71, "Shield Battery"},
         };
 
         public static Dictionary<int, string> CommonStuff = new Dictionary<int, string>
         {
-            {9, "Triple Take"},
-            {21, "Alternator"},
-            {69, "Shield Cell"},
-            {67, "Syringe"},
-            //{67, "Knockdown Shield Level 1"},
-            //{71, "Backpack Level 1"},
-            //{59, "Body Armor Level 1"},
-            //{55, "Helmet Level 1"},
-            {91, "Frag Grenade"},
-            {92, "Arc Star"},
+            {10, "Triple Take"},
+            {22, "Alternator"},
+            {72, "Shield Cell"},
+            {70, "Syringe"},
+            //{86, "Knockdown Shield Level 1"},
+            //{90, "Backpack Level 1"},
+            //{77, "Body Armor Level 1"},
+            //{73, "Helmet Level 1"},
+            {95, "Frag Grenade"},
+            {96, "Arc Star"},
         };
 
 
@@ -188,7 +189,7 @@ namespace ApexLegends
                 Components.AimbotComponent.AimGlobalBool,
                 Components.AimbotComponent.AimKey,
                 Components.AimbotComponent.AimSpotKey,
-                Components.AimbotComponent.AimType,
+                //Components.AimbotComponent.AimType,
                 Components.AimbotComponent.AimSpot,
                 Components.AimbotComponent.AimSpeed,
                 Components.AimbotComponent.DrawAimSpot,
@@ -226,11 +227,11 @@ namespace ApexLegends
                 ItemsMenu.Add(new MenuBool(anItem.Key.ToString(), anItem.Value, true));
 
             List<KeyValuePair<int, string>> ammoItems = new List<KeyValuePair<int, string>>();
-            ammoItems.Add(new KeyValuePair<int, string>(59, "Light Rounds"));
-            ammoItems.Add(new KeyValuePair<int, string>(60, "Energy Ammo"));
-            ammoItems.Add(new KeyValuePair<int, string>(61, "Shotgun Shells"));
-            ammoItems.Add(new KeyValuePair<int, string>(62, "Heavy Rounds"));
-            ammoItems.Add(new KeyValuePair<int, string>(63, "Sniper Ammo"));
+            ammoItems.Add(new KeyValuePair<int, string>(62, "Light Rounds"));
+            ammoItems.Add(new KeyValuePair<int, string>(63, "Energy Ammo"));
+            ammoItems.Add(new KeyValuePair<int, string>(64, "Shotgun Shells"));
+            ammoItems.Add(new KeyValuePair<int, string>(65, "Heavy Rounds"));
+            ammoItems.Add(new KeyValuePair<int, string>(66, "Sniper Ammo"));
 
             ItemsMenu.Add(new MenuSeperator("itemmenuammoseparator0", ""));
             ItemsMenu.Add(new MenuSeperator("itemmenuammoseparator", "Ammo Items"));
@@ -258,22 +259,31 @@ namespace ApexLegends
         }
 
 
+        public static void LoadSpoofer()
+        {
+            if (!Memory.HWIDSpoofer(HWDrvName.btbd_hwid))
+            {
+                Console.WriteLine("[ERROR] Failed to initialize HWID Spoofer for some reason...");
+            }
+        }
+        public static void LoadDriver()
+        {
+            if (!Memory.InitDriver(DriverName.nsiproxy))
+            {
+                Console.WriteLine("[ERROR] Failed to initialize Driver for some reason...");
+            }
+        }
+
         static void Main(string[] args)
         {
-            Console.WriteLine("WeScript.app ApexLegends Example Assembly Loaded! - GH");
+            Console.WriteLine("WeScript.app ApexLegends Premium Cheat Loaded With HWID Spoofer! -GH");
             InitializeMenu();
             Renderer.OnRenderer += OnRenderer;
             Memory.OnTick += OnTick;
 
-            if (WeScript.SDK.Utils.VIP.IsSubscriber())
-            {
-                if (!Memory.InitDriver(DriverName.frost_64))
-                {
-                    Console.WriteLine("[ERROR] Failed to initialize driver for some reason...");
-                }
-            }
-            else
-                Components.UseDriverBypassMenu.Enabled = false;
+            DelayAction.Queue(() => LoadSpoofer(), 1000); //firstly spoof hwid
+            //some chill delay of 1000ms first :)
+            DelayAction.Queue(() => LoadDriver(), 2000); //second load RPM driver
 
             //Events...
             Components.AimbotComponent.AimSpotKey.OnValueChanged += (sender, e) =>
@@ -284,10 +294,8 @@ namespace ApexLegends
                 int newIndex = (selectedIndex % Components.AimbotComponent.AimSpot.Items.Length - 1 == 0) ? 0 : ++selectedIndex;
                 Components.AimbotComponent.AimSpot.Value = newIndex;
             };
-            UseDriverBypass = Components.UseDriverBypassMenu.Enabled;
+            UseDriverBypass = true; //Components.UseDriverBypassMenu.Enabled;
         }
-
-
 
         private static IntPtr GetEntityByIndex(IntPtr processHandle, uint index)
         {
@@ -437,35 +445,6 @@ namespace ApexLegends
 
             return tmp;
         }
-        public static void SendMessageToOrigin()
-        {
-            var originPID = Memory.GetPIDForProcess("Origin.exe");
-            if (originPID > 0)
-            {
-                IntPtr originWindow = Memory.FindMainWindow(originPID);
-                //Console.WriteLine($"OriginWindow: {originWindow.ToString()}");
-                Input.SetFocusWS(originWindow);
-                Input.SetForegroundWindowWS(originWindow);
-                Input.KeyDown(VirtualKeyCode.Alt);
-                Input.KeyPress(VirtualKeyCode.O);
-                Input.KeyPress(VirtualKeyCode.G);
-                Input.KeyUp(VirtualKeyCode.Alt);
-                Input.SleepWS(500);
-                Input.SetFocusWS(originWindow);
-                Input.SetForegroundWindowWS(originWindow);
-                Input.KeyDown(VirtualKeyCode.Alt);
-                Input.KeyPress(VirtualKeyCode.O);
-                Input.KeyPress(VirtualKeyCode.G);
-                Input.KeyUp(VirtualKeyCode.Alt);
-                Input.KeyPress(VirtualKeyCode.Alt); //to unstuck the key ... if possible
-                Input.SleepWS(500);
-                IntPtr gameWindowz = Memory.FindWindowClassName("Respawn001");
-                Input.SetFocusWS(gameWindowz);
-                Input.SetForegroundWindowWS(gameWindowz);
-
-            }
-
-        }
 
         private static void OnTick(int counter, EventArgs args)
         {
@@ -520,31 +499,19 @@ namespace ApexLegends
                             //Console.WriteLine($"GameSize: {GameSize.ToString("X")}"); //easy way to check if we got reading rights
                             if (EntityListPtr == IntPtr.Zero)
                             {
-                                EntityListPtr = UseDriverBypass ? (IntPtr)(GameBase.ToInt64() + 0x175EC28) :
-                                    Memory.FindSignature(processHandle, GameBase, GameSize, "0F B7 C8 48 8D 05 ? ? ? ? 48 C1 E1 05 48 03 C8", 0x6);
+                                EntityListPtr = EntityListPtr = Memory.ZwFindSignature(processHandle, GameBase, GameSize, "0F B7 C8 48 8D 05 ? ? ? ? 48 C1 E1 05 48 03 C8", 0x6);
                             }
                             if (LocalPlayerPtr == IntPtr.Zero)
                             {
-                                LocalPlayerPtr = UseDriverBypass ? (IntPtr)(GameBase.ToInt64() + 0x1B0D448) :
-                                    Memory.FindSignature(processHandle, GameBase, GameSize, "48 8B 05 ? ? ? ? 48 0F 44 C7 48 89 05", 0x3);
+                                LocalPlayerPtr = LocalPlayerPtr = Memory.ZwFindSignature(processHandle, GameBase, GameSize, "48 8B 05 ? ? ? ? 48 0F 44 C7 48 89 05", 0x3);
                             }
                             if (ViewRenderPtr == IntPtr.Zero)
                             {
-                                ViewRenderPtr = UseDriverBypass ? (IntPtr)(GameBase.ToInt64() + 0x3F5C2C0) :
-                                    Memory.FindSignature(processHandle, GameBase, GameSize, "48 8B 0D ? ? ? ? 44 0F 28 C2", 0x3);
+                                ViewRenderPtr = ViewRenderPtr = Memory.ZwFindSignature(processHandle, GameBase, GameSize, "48 8B 0D ? ? ? ? 44 0F 28 C2", 0x3);
                             }
                             if (ViewMatrixOffs == IntPtr.Zero)
                             {
-                                ViewMatrixOffs = UseDriverBypass ? (IntPtr)0x1B3BD0 :
-                                    Memory.FindSignature(processHandle, GameBase, GameSize, "48 89 AB ? ? ? ? 4C 89 9B", 0x3, true);
-                            }
-                            if (isGameOnTop)
-                            {
-                                if (shouldpostmsg)
-                                {
-                                    shouldpostmsg = false;
-                                    SendMessageToOrigin();
-                                }
+                                ViewMatrixOffs = Memory.ZwFindSignature(processHandle, GameBase, GameSize, "48 89 AB ? ? ? ? 4C 89 9B", 0x3, true);
                             }
                         }
                     }
@@ -565,50 +532,12 @@ namespace ApexLegends
                 }
             }
         }
-
-        public static ulong timeWithLP = 0;
-        public static ulong timeWithoutLP = 0;
-        public static ulong timeToPlayWithoutDC = 87000; //about minute and half, with 3 seconds to reconnect
-
         private static void OnRenderer(int fps, EventArgs args)
         {
             if (!gameProcessExists) return; //process is dead, don't bother drawing
             if ((!isGameOnTop) && (!isOverlayOnTop)) return; //if game and overlay are not on top, don't draw
             if (!Components.MainAssemblyToggle.Enabled) return; //main menu boolean to toggle the cheat on or off
 
-            if ((timeWithLP > 0) && (timeWithLP < timeToPlayWithoutDC))
-            {
-                var secondsLeft = (timeToPlayWithoutDC - timeWithLP) / 1000;
-
-                //if (Components.MiscComponent.SupportInChat.Enabled)
-                {
-                    if (secondsLeft == 5)
-                    {
-                        if (mySecondsBefore == 0)
-                        {
-                            mySecondsBefore = 5;
-                            shouldpostmsg = true;
-                        }
-                    }
-                    else
-                    {
-                        mySecondsBefore = 0;
-                    }
-                }
-
-
-                if (Components.VisualsComponent.DrawTimeLeft.Enabled)
-                {
-                    if (secondsLeft < 15)
-                    {
-                        Renderer.DrawText($"!! {secondsLeft.ToString()} !!", GameCenterPos.X, GameCenterPos.Y + (GameCenterPos.Y / 2), new Color(255, 0, 0), 72, TextAlignment.centered);
-                    }
-                    else
-                    {
-                        Renderer.DrawText(secondsLeft.ToString(), GameCenterPos.X, GameCenterPos.Y + (GameCenterPos.Y / 2), new Color(255, 255, 255), 40, TextAlignment.centered);
-                    }
-                }
-            }
 
             double fClosestPos = 999999;
             AimTarg2D = new Vector2(0, 0);
@@ -626,8 +555,6 @@ namespace ApexLegends
                         var localPlayer = UseDriverBypass ? Memory.ZwReadPointer(processHandle, LocalPlayerPtr, isWow64Process) : Memory.ReadPointer(processHandle, LocalPlayerPtr, isWow64Process);
                         if (localPlayer != IntPtr.Zero)
                         {
-                            timeWithLP = Memory.TickCount - timeWithoutLP;
-
                             var myCameraPos = UseDriverBypass ? Memory.ZwReadVector3(processHandle, (IntPtr)(localPlayer.ToInt64() + CameraPosition)) : Memory.ReadVector3(processHandle, (IntPtr)(localPlayer.ToInt64() + CameraPosition));
                             var StaticAngles = UseDriverBypass ? Memory.ZwReadVector3(processHandle, (IntPtr)(localPlayer.ToInt64() + AnglesStatic)) : Memory.ReadVector3(processHandle, (IntPtr)(localPlayer.ToInt64() + AnglesStatic));
                             var WritableAngles = UseDriverBypass ? Memory.ZwReadVector3(processHandle, (IntPtr)(localPlayer.ToInt64() + ViewAngles)) : Memory.ReadVector3(processHandle, (IntPtr)(localPlayer.ToInt64() + ViewAngles));
@@ -790,29 +717,29 @@ namespace ApexLegends
                                         if (Renderer.WorldToScreen(item.ItemPosV3, out itemPosVec, matrix, wndMargins,
                                             wndSize, W2SType.TypeD3D9))
                                         {
-                                            if (item.Id >= 59 && item.Id <= 63)
+                                            if (item.Id >= 62 && item.Id <= 66)
                                             {
                                                 var itemName = "";
                                                 Color selectedColor = Color.LightYellow;
                                                 switch (item.Id)
                                                 {
-                                                    case 59:
+                                                    case 62:
                                                         itemName = "Light Rounds";
                                                         selectedColor = Color.LightYellow;
                                                         break;
-                                                    case 60:
+                                                    case 63:
                                                         itemName = "Energy Ammo";
                                                         selectedColor = Color.Yellow;
                                                         break;
-                                                    case 61:
+                                                    case 64:
                                                         itemName = "Shotgun Shells";
                                                         selectedColor = Color.DarkRed;
                                                         break;
-                                                    case 62:
+                                                    case 65:
                                                         itemName = "Heavy Rounds";
                                                         selectedColor = Color.Green;
                                                         break;
-                                                    case 63:
+                                                    case 66:
                                                         itemName = "Sniper Ammo";
                                                         selectedColor = Color.BlueViolet;
                                                         break;
@@ -942,10 +869,6 @@ namespace ApexLegends
                                     }
                                 }
                             }
-                        }
-                        else
-                        {
-                            timeWithoutLP = Memory.TickCount;
                         }
                     }
                 }
