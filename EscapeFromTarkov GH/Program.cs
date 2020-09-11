@@ -1086,6 +1086,21 @@ namespace EscapeFromTarkov
         //https://github.com/matkuscz/EscapeFromTarkov-External-Cheat
         //https://github.com/Zeziroth/EscapeFromTarkov_External_ESP/tree/master/UnityExtract/UnityExtract
 
+        public static void LoadSpoofer()
+        {
+            if (!Memory.HWIDSpoofer(HWDrvName.btbd_hwid))
+            {
+                Console.WriteLine("[ERROR] Failed to initialize HWID Spoofer for some reason...");
+            }
+        }
+        public static void LoadDriver()
+        {
+            if (!Memory.InitDriver(DriverName.nsiproxy))
+            {
+                Console.WriteLine("[ERROR] Failed to initialize Driver for some reason...");
+            }
+        }
+
         static void Main(string[] args)
         {
             if (!VIP.IsSubscriber())
@@ -1102,13 +1117,15 @@ namespace EscapeFromTarkov
 
             Console.WriteLine("WeScript.app Escape From Tarkov Assembly 1.0 Loaded! - GH");
 
-            if (!Memory.InitDriver(DriverName.xHunter))
-            {
-                Console.WriteLine("[ERROR] Failed to initialize driver for some reason...");
-            }
             InitializeMenu();
             Renderer.OnRenderer += OnRenderer;
             Memory.OnTick += OnTick;
+
+            Overlay.RemoveTopMostFlag(true);
+            Memory.TerminateProcess("WeScript.Loader.exe"); //close the loader because it's detected from EAC
+            DelayAction.Queue(() => LoadSpoofer(), 1000); //firstly spoof hwid
+            //some chill delay of 1000ms first :)
+            DelayAction.Queue(() => LoadDriver(), 2000); //second load RPM driver
         }
 
 
