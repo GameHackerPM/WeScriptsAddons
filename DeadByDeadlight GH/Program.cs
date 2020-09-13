@@ -108,18 +108,35 @@ namespace DeadByDaylight
             {
                 if (GameBase != IntPtr.Zero)
                 {
-                    var GNamesAddress = Memory.ZwReadPointer(processHandle, GNamesPtr, isWow64Process); //48 8B 05 ? ? ? ? 48 85 C0 75 5F
-                    if (GNamesAddress != IntPtr.Zero)
+                    //var GNamesAddress = Memory.ZwReadPointer(processHandle, (IntPtr)(GNamesPtr.ToInt64() + 0x0), isWow64Process); 
+                    //if (GNamesAddress != IntPtr.Zero)
+                    //{
+                    //    UInt64 ChunkIndex = ID / 0x4000;
+                    //    UInt64 WithinChunkIndex = ID % 0x4000;
+                    //    var fNamePtr = Memory.ZwReadPointer(processHandle, (IntPtr)(GNamesAddress.ToInt64() + (long)ChunkIndex * 0x8), isWow64Process);
+                    //    if (fNamePtr != IntPtr.Zero)
+                    //    {
+                    //        var fName = Memory.ZwReadPointer(processHandle, (IntPtr)(fNamePtr.ToInt64() + 0x8 * (long)WithinChunkIndex), isWow64Process);
+                    //        if (fName != IntPtr.Zero)
+                    //        {
+                    //            var name = Memory.ZwReadString(processHandle, (IntPtr)fName.ToInt64() + 0xC, false, 64);
+                    //            if (name.Length > 0) return name;
+                    //        }
+                    //    }
+                    //}
+                    uint BlockIndex = ID >> 16;
+                    var Address = Memory.ZwReadPointer(processHandle, (IntPtr)(GNamesPtr.ToInt64() + 0x10 + BlockIndex * 8), isWow64Process);
+                    if (Address != IntPtr.Zero)
                     {
-                        UInt64 ChunkIndex = ID / 0x4000;
-                        UInt64 WithinChunkIndex = ID % 0x4000;
-                        var fNamePtr = Memory.ZwReadPointer(processHandle, (IntPtr)(GNamesAddress.ToInt64() + (long)ChunkIndex * 0x8), isWow64Process);
-                        if (fNamePtr != IntPtr.Zero)
+                        var Offset = ID & 65535;
+                        var NameAddress = (IntPtr)(Address.ToInt64() + Offset * 4);
+                        var tempID = Memory.ZwReadDWORD(processHandle, NameAddress);
+                        if (tempID == ID)
                         {
-                            var fName = Memory.ZwReadPointer(processHandle, (IntPtr)(fNamePtr.ToInt64() + 0x8 * (long)WithinChunkIndex), isWow64Process);
-                            if (fName != IntPtr.Zero)
+                            var charLen = Memory.ZwReadWORD(processHandle, (IntPtr)(NameAddress.ToInt64() + 4));
+                            if (charLen > 0)
                             {
-                                var name = Memory.ZwReadString(processHandle, (IntPtr)fName.ToInt64() + 0xC, false, 64);
+                                var name = Memory.ZwReadString(processHandle, (IntPtr)(NameAddress.ToInt64() + 6), false, charLen);
                                 if (name.Length > 0) return name;
                             }
                         }
@@ -199,12 +216,13 @@ namespace DeadByDaylight
                         {
                             if (GWorldPtr == IntPtr.Zero)
                             {
-                                GWorldPtr = Memory.ZwFindSignature(processHandle, GameBase, GameSize, "48 8B 1D ? ? ? ? 48 85 DB 74 3B 41", 0x3);
-                                Console.WriteLine($"GWorldPtr: {GWorldPtr.ToString("X")}");
+                                //GWorldPtr = Memory.ZwFindSignature(processHandle, GameBase, GameSize, "48 8B 1D ? ? ? ? 48 85 DB 74 3B 41", 0x3); //4.1 patch
+                                GWorldPtr = Memory.ZwFindSignature(processHandle, GameBase, GameSize, "48 89 05 ? ? ? ? 0F 28 D7", 0x3);
                             }
                             if (GNamesPtr == IntPtr.Zero)
                             {
-                                GNamesPtr = Memory.ZwFindSignature(processHandle, GameBase, GameSize, "48 8B 05 ? ? ? ? 48 85 C0 75 5F", 0x3);
+                                //GNamesPtr = Memory.ZwFindSignature(processHandle, GameBase, GameSize, "48 8B 05 ? ? ? ? 48 85 C0 75 5F", 0x3); //4.1 patch
+                                GNamesPtr = Memory.ZwFindSignature(processHandle, GameBase, GameSize, "48 8D 1D ? ? ? ? EB 16 48 8D 0D", 0x3);
                                 Console.WriteLine($"GNamesPtr: {GNamesPtr.ToString("X")}");
                             }
                         }
@@ -238,16 +256,13 @@ namespace DeadByDaylight
             //Matrix viewProj = new Matrix();
             var myPos = new Vector3();
             var USkillCheck = IntPtr.Zero;
-            var UWorld =
-                Memory.ZwReadPointer(processHandle, GWorldPtr,
-                    isWow64Process); //48 8B 1D ?? ?? ?? ?? 48 85 DB 74 3B 41 || mov rbx,[DeadByDaylight-Win64-Shipping.exe+5A29158]
+            var UWorld = Memory.ZwReadPointer(processHandle, GWorldPtr, isWow64Process);
             if (UWorld != IntPtr.Zero)
             {
-                var UGameInstance =
-                    Memory.ZwReadPointer(processHandle, (IntPtr) UWorld.ToInt64() + 0x170, isWow64Process);
+                var UGameInstance = Memory.ZwReadPointer(processHandle, (IntPtr)UWorld.ToInt64() + 0x198, isWow64Process);
                 if (UGameInstance != IntPtr.Zero)
                 {
-                    var localPlayerArray = Memory.ZwReadPointer(processHandle, (IntPtr) UGameInstance.ToInt64() + 0x40,
+                    var localPlayerArray = Memory.ZwReadPointer(processHandle, (IntPtr)UGameInstance.ToInt64() + 0x40,
                         isWow64Process);
                     if (localPlayerArray != IntPtr.Zero)
                     {
@@ -255,41 +270,41 @@ namespace DeadByDaylight
                         if (ULocalPlayer != IntPtr.Zero)
                         {
                             var ULocalPlayerControler = Memory.ZwReadPointer(processHandle,
-                                (IntPtr) ULocalPlayer.ToInt64() + 0x0038, isWow64Process);
+                                (IntPtr)ULocalPlayer.ToInt64() + 0x0038, isWow64Process);
                             if (ULocalPlayerControler != IntPtr.Zero)
                             {
                                 var ULocalPlayerPawn = Memory.ZwReadPointer(processHandle,
-                                    (IntPtr) ULocalPlayerControler.ToInt64() + 0x0378, isWow64Process);
+                                    (IntPtr)ULocalPlayerControler.ToInt64() + 0x02B8, isWow64Process);
                                 if (ULocalPlayerPawn != IntPtr.Zero)
                                 {
                                     var UInteractionHandler = Memory.ZwReadPointer(processHandle,
-                                        (IntPtr) ULocalPlayerPawn.ToInt64() + 0x0BF0, isWow64Process);
+                                        (IntPtr)ULocalPlayerPawn.ToInt64() + 0x0960, isWow64Process);
 
                                     if (UInteractionHandler != IntPtr.Zero)
                                     {
                                         USkillCheck = Memory.ZwReadPointer(processHandle,
-                                            (IntPtr) UInteractionHandler.ToInt64() + 0x0278, isWow64Process);
+                                            (IntPtr)UInteractionHandler.ToInt64() + 0x0230, isWow64Process);
                                     }
 
                                     var ULocalRoot = Memory.ZwReadPointer(processHandle,
-                                        (IntPtr) ULocalPlayerPawn.ToInt64() + 0x0168, isWow64Process);
+                                        (IntPtr)ULocalPlayerPawn.ToInt64() + 0x0140, isWow64Process);
                                     if (ULocalRoot != IntPtr.Zero)
                                     {
                                         myPos = Memory.ZwReadVector3(processHandle,
-                                            (IntPtr) ULocalRoot.ToInt64() + 0x017C);
+                                            (IntPtr)ULocalRoot.ToInt64() + 0x0118);
                                     }
                                 }
 
                                 var APlayerCameraManager = Memory.ZwReadPointer(processHandle,
-                                    (IntPtr) ULocalPlayerControler.ToInt64() + 0x3E0, isWow64Process);
+                                    (IntPtr)ULocalPlayerControler.ToInt64() + 0x2D0, isWow64Process);
                                 if (APlayerCameraManager != IntPtr.Zero)
                                 {
                                     FMinimalViewInfo_Location = Memory.ZwReadVector3(processHandle,
-                                        (IntPtr) APlayerCameraManager.ToInt64() + 0x1A30 + 0x0010);
+                                        (IntPtr)APlayerCameraManager.ToInt64() + 0x1A80 + 0x0000);
                                     FMinimalViewInfo_Rotation = Memory.ZwReadVector3(processHandle,
-                                        (IntPtr) APlayerCameraManager.ToInt64() + 0x1A30 + 0x001C);
+                                        (IntPtr)APlayerCameraManager.ToInt64() + 0x1A80 + 0x000C);
                                     FMinimalViewInfo_FOV = Memory.ZwReadFloat(processHandle,
-                                        (IntPtr) APlayerCameraManager.ToInt64() + 0x1A30 + 0x0028);
+                                        (IntPtr)APlayerCameraManager.ToInt64() + 0x1A80 + 0x0018);
                                 }
                             }
 
@@ -306,15 +321,31 @@ namespace DeadByDaylight
                 {
                     if (USkillCheck != IntPtr.Zero)
                     {
+                        //for (int i = 499; i < 1000; i += 2)
+                        //{
+                        //    //var xx = Memory.ZwReadFloat(processHandle, (IntPtr)USkillCheck.ToInt64() + i);
+                        //    //if (xx <= 10000 && xx >= -200)
+                        //    //Console.WriteLine(i.ToString("X") + " => " + xx);
+                        //}
+                        //Console.WriteLine("------------------------------------------------------------");
+                        //Console.WriteLine("Timing: " + Memory.ZwReadFloat(processHandle, (IntPtr) USkillCheck.ToInt64() + 0x022C).ToString());
                         var isDisplayed = Memory.ZwReadBool(processHandle,
-                            (IntPtr) USkillCheck.ToInt64() + 0x0308);
+                            (IntPtr)USkillCheck.ToInt64() + 0x027C);
                         if (isDisplayed && LastSpacePressedDT.AddMilliseconds(200) <
                             DateTime.Now)
                         {
                             var currentProgress = Memory.ZwReadFloat(processHandle,
-                                (IntPtr) USkillCheck.ToInt64() + 0x02A0);
+                                (IntPtr)USkillCheck.ToInt64() + 0x022C); //0x02A0
                             var startSuccessZone = Memory.ZwReadFloat(processHandle,
-                                (IntPtr) USkillCheck.ToInt64() + 0x0270);
+                                (IntPtr)USkillCheck.ToInt64() + 0x0264);
+
+                            //for (int i = 400; i < 1000; i += 2)
+                            //{
+                            //    var xx = Memory.ZwReadFloat(processHandle, (IntPtr)USkillCheck.ToInt64() + i);
+                            //    if (xx > 0 && xx < 1)
+                            //        Console.WriteLine(i.ToString("X") + " => " + xx);
+                            //}
+                            //Console.WriteLine("Timing: " + Memory.ZwReadFloat(processHandle, (IntPtr)USkillCheck.ToInt64() + 0x0230).ToString());
 
                             if (currentProgress > startSuccessZone)
                             {
@@ -325,35 +356,36 @@ namespace DeadByDaylight
                     }
                 }
 
-                var ULevel = Memory.ZwReadPointer(processHandle, (IntPtr) UWorld.ToInt64() + 0x38, isWow64Process);
+                var ULevel = Memory.ZwReadPointer(processHandle, (IntPtr)UWorld.ToInt64() + 0x38, isWow64Process);
                 if (ULevel != IntPtr.Zero)
                 {
-                    var AActors = Memory.ZwReadPointer(processHandle, (IntPtr) ULevel.ToInt64() + 0xA0, isWow64Process);
-                    var ActorCnt = Memory.ZwReadUInt32(processHandle, (IntPtr) ULevel.ToInt64() + 0xA8);
+                    var AActors = Memory.ZwReadPointer(processHandle, (IntPtr)ULevel.ToInt64() + 0xA0, isWow64Process);
+                    var ActorCnt = Memory.ZwReadUInt32(processHandle, (IntPtr)ULevel.ToInt64() + 0xA8);
                     if ((AActors != IntPtr.Zero) && (ActorCnt > 0))
                     {
                         for (uint i = 0; i <= ActorCnt; i++)
                         {
-                            var AActor = Memory.ZwReadPointer(processHandle, (IntPtr) (AActors.ToInt64() + i * 8),
+                            var AActor = Memory.ZwReadPointer(processHandle, (IntPtr)(AActors.ToInt64() + i * 8),
                                 isWow64Process);
                             if (AActor != IntPtr.Zero)
                             {
                                 var USceneComponent = Memory.ZwReadPointer(processHandle,
-                                    (IntPtr) AActor.ToInt64() + 0x168, isWow64Process);
+                                    (IntPtr)AActor.ToInt64() + 0x140, isWow64Process);
                                 if (USceneComponent != IntPtr.Zero)
                                 {
                                     var tempVec = Memory.ZwReadVector3(processHandle,
-                                        (IntPtr) USceneComponent.ToInt64() + 0x160);
+                                        (IntPtr)USceneComponent.ToInt64() + 0x118);
                                     var AActorID = Memory.ZwReadUInt32(processHandle,
-                                        (IntPtr) AActor.ToInt64() + 0x18);
+                                        (IntPtr)AActor.ToInt64() + 0x18);
 
-                                    if ((AActorID > 0) && (AActorID < 200000))
+                                    string retname = "";
+                                    if ((AActorID > 0)) //&& (AActorID < 700000)
                                     {
                                         if ((survivorID == 0) || (killerID == 0) || (escapeID == 0) ||
                                             (hatchID == 0) || (generatorID == 0))
                                         {
 
-                                            var retname = GetNameFromID(AActorID);
+                                            retname = GetNameFromID(AActorID);
                                             if (retname.Contains("BP_CamperInteractable_"))
                                             {
                                                 survivorID = AActorID;
@@ -408,7 +440,7 @@ namespace DeadByDaylight
                                     if (Components.VisualsComponent.DrawTheVisuals.Enabled
                                     ) //this should have been placed earlier?
                                     {
-                                        int dist = (int) (GetDistance3D(myPos, tempVec));
+                                        int dist = (int)(GetDistance3D(myPos, tempVec));
                                         if (AActorID == survivorID)
                                         {
                                             Vector2 vScreen_h3ad = new Vector2(0, 0);
@@ -502,12 +534,12 @@ namespace DeadByDaylight
                                             if (AActorID != generatorID)
                                                 continue;
                                             var isRepaired =
-                                                Memory.ZwReadBool(processHandle, (IntPtr) AActor.ToInt64() + 0x03D1);
+                                                Memory.ZwReadBool(processHandle, (IntPtr)AActor.ToInt64() + 0x02C9);
                                             var isBlocked = Memory.ZwReadBool(processHandle,
-                                                (IntPtr) AActor.ToInt64() + 0x0494);
+                                                (IntPtr)AActor.ToInt64() + 0x038C);
 
                                             var currentProgressPercent =
-                                                Memory.ZwReadFloat(processHandle, (IntPtr) AActor.ToInt64() + 0x03E0) *
+                                                Memory.ZwReadFloat(processHandle, (IntPtr)AActor.ToInt64() + 0x02D8) *
                                                 100;
                                             Color selectedColor;
                                             if (isBlocked)
@@ -522,8 +554,7 @@ namespace DeadByDaylight
                                                 FMinimalViewInfo_FOV,
                                                 wndMargins, wndSize))
                                             {
-                                                Renderer.DrawText(
-                                                    $"Generator [{dist}m] ({currentProgressPercent:##0}%)",
+                                                Renderer.DrawText($"Generator [{dist}m] ({currentProgressPercent:##0}%)",
                                                     vScreen_d3d11,
                                                     selectedColor, 15, TextAlignment.centered, false);
                                             }
