@@ -10,7 +10,7 @@ namespace EscapeFromTarkov
 	{
 		/* ==== Bitwise operations ==== */
 
-		[Vector4f.AccelerationAttribute(Vector4f.AccelMode.SSE1)]
+		/*[Vector4f.AccelerationAttribute(Vector4f.AccelMode.SSE1)]
 		public static unsafe Vector4f AndNot(this Vector4f v1, Vector4f v2)
 		{
 			Vector4f res = new Vector4f();
@@ -68,7 +68,7 @@ namespace EscapeFromTarkov
 
 		/* ==== Horizontal operations ==== */
 
-		[Vector4f.AccelerationAttribute(Vector4f.AccelMode.SSE3)]
+		/*[Vector4f.AccelerationAttribute(Vector4f.AccelMode.SSE3)]
 		public static Vector4f HorizontalAdd(this Vector4f v1, Vector4f v2)
 		{
 			return new Vector4f(v1.x + v1.y, v1.z + v1.w, v2.x + v2.y, v2.z + v2.w);
@@ -91,7 +91,7 @@ namespace EscapeFromTarkov
 		/* ==== Compare methods ==== */
 
 		/*Same as a == b. */
-		[Vector4f.AccelerationAttribute(Vector4f.AccelMode.SSE1)]
+		/*[Vector4f.AccelerationAttribute(Vector4f.AccelMode.SSE1)]
 		public unsafe static Vector4f CompareEqual(this Vector4f v1, Vector4f v2)
 		{
 			Vector4f res = new Vector4f();
@@ -103,7 +103,7 @@ namespace EscapeFromTarkov
 			return res;
 		}
 		/*Same as a < b. */
-		[Vector4f.AccelerationAttribute(Vector4f.AccelMode.SSE1)]
+		/*[Vector4f.AccelerationAttribute(Vector4f.AccelMode.SSE1)]
 		public unsafe static Vector4f CompareLessThan(this Vector4f v1, Vector4f v2)
 		{
 			Vector4f res = new Vector4f();
@@ -116,7 +116,7 @@ namespace EscapeFromTarkov
 		}
 
 		/*Same as a <= b. */
-		[Vector4f.AccelerationAttribute(Vector4f.AccelMode.SSE1)]
+		/*[Vector4f.AccelerationAttribute(Vector4f.AccelMode.SSE1)]
 		public unsafe static Vector4f CompareLessEqual(this Vector4f v1, Vector4f v2)
 		{
 			Vector4f res = new Vector4f();
@@ -130,7 +130,7 @@ namespace EscapeFromTarkov
 
 
 		/*Same float.IsNaN (a) || float.IsNaN (b). */
-		[Vector4f.AccelerationAttribute(Vector4f.AccelMode.SSE1)]
+		/*[Vector4f.AccelerationAttribute(Vector4f.AccelMode.SSE1)]
 		public unsafe static Vector4f CompareUnordered(this Vector4f v1, Vector4f v2)
 		{
 			Vector4f res = new Vector4f();
@@ -144,7 +144,7 @@ namespace EscapeFromTarkov
 
 
 		/*Same as a != b. */
-		[Vector4f.AccelerationAttribute(Vector4f.AccelMode.SSE1)]
+		/*[Vector4f.AccelerationAttribute(Vector4f.AccelMode.SSE1)]
 		public unsafe static Vector4f CompareNotEqual(this Vector4f v1, Vector4f v2)
 		{
 			Vector4f res = new Vector4f();
@@ -157,7 +157,7 @@ namespace EscapeFromTarkov
 		}
 
 		/*Same as !(a < b). */
-		[Vector4f.AccelerationAttribute(Vector4f.AccelMode.SSE1)]
+		/*[Vector4f.AccelerationAttribute(Vector4f.AccelMode.SSE1)]
 		public unsafe static Vector4f CompareNotLessThan(this Vector4f v1, Vector4f v2)
 		{
 			Vector4f res = new Vector4f();
@@ -171,7 +171,7 @@ namespace EscapeFromTarkov
 
 
 		/*Same as !(a <= b). */
-		[Vector4f.AccelerationAttribute(Vector4f.AccelMode.SSE1)]
+		/*[Vector4f.AccelerationAttribute(Vector4f.AccelMode.SSE1)]
 		public unsafe static Vector4f CompareNotLessEqual(this Vector4f v1, Vector4f v2)
 		{
 			Vector4f res = new Vector4f();
@@ -184,7 +184,7 @@ namespace EscapeFromTarkov
 		}
 
 		/*Same !float.IsNaN (a) && !float.IsNaN (b). */
-		[Vector4f.AccelerationAttribute(Vector4f.AccelMode.SSE1)]
+		/*[Vector4f.AccelerationAttribute(Vector4f.AccelMode.SSE1)]
 		public unsafe static Vector4f CompareOrdered(this Vector4f v1, Vector4f v2)
 		{
 			Vector4f res = new Vector4f();
@@ -198,7 +198,7 @@ namespace EscapeFromTarkov
 
 		/* ==== Data shuffling ==== */
 
-		[Vector4f.AccelerationAttribute(Vector4f.AccelMode.SSE1)]
+		/*[Vector4f.AccelerationAttribute(Vector4f.AccelMode.SSE1)]
 		public static Vector4f InterleaveHigh(this Vector4f v1, Vector4f v2)
 		{
 			return new Vector4f(v1.z, v2.z, v1.w, v2.w);
@@ -237,6 +237,6 @@ namespace EscapeFromTarkov
 			float* ptr = (float*)&v1;
 			int idx = (int)sel;
 			return new Vector4f(*(ptr + ((idx >> 0) & 0x3)), *(ptr + ((idx >> 2) & 0x3)), *(ptr + ((idx >> 4) & 0x3)), *(ptr + ((idx >> 6) & 0x3)));
-		}
+		}*/
 	}
 }

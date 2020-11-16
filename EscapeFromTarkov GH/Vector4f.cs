@@ -78,7 +78,7 @@ namespace EscapeFromTarkov
 		public float Y { get { return y; } set { y = value; } }
 		public float Z { get { return z; } set { z = value; } }
 		public float W { get { return w; } set { w = value; } }
-
+		/*
 		public static Vector4f Pi
 		{
 			get { return new Vector4f((float)System.Math.PI); }
@@ -327,7 +327,7 @@ namespace EscapeFromTarkov
 		public static unsafe void PrefetchNonTemporal(Vector4f* res)
 		{
 		}
-
+		*/
 		public override string ToString()
 		{
 			return "<" + x + ", " + y + ", " + z + ", " + w + ">";

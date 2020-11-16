@@ -65,8 +65,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Matrix34.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="AssemblyInfo.cs" />
+    <Compile Include="Vector4f.cs" />
+    <Compile Include="VectorOperations.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

@@ -13,6 +13,7 @@ using WeScript.SDK.UI;
 using WeScript.SDK.UI.Components;
 using System.Runtime.InteropServices; //for StructLayout
 using System.Security.Permissions;
+//using Cube2Example;
 using WeScript.SDK.Utils;
 
 namespace EscapeFromTarkov
@@ -930,6 +931,7 @@ namespace EscapeFromTarkov
                 public static readonly MenuSliderBool DrawTextSize = new MenuSliderBool("drawtextsize", "Text Size", false, 14, 4, 72);
                 public static readonly MenuBool DrawTextDist = new MenuBool("drawtextdist", "Draw Distance", true);
                 public static readonly MenuBool DrawTextName = new MenuBool("drawtextname", "Draw Player Name", true);
+                public static readonly MenuBool NoRecoil = new MenuBool("norecoil", "NoRecoil", false);
                 public static readonly MenuBool DrawTotalPlayersCount = new MenuBool("drawtotalplayerscount", "Draw Total Players Count (Scavs Included)", true);
             }
 
@@ -970,6 +972,7 @@ namespace EscapeFromTarkov
                 //Components.VisualsComponent.DrawBoxAR,                Components.VisualsComponent.DrawTextSize,
                 Components.VisualsComponent.DrawTextDist,
                 Components.VisualsComponent.DrawTextName,
+                Components.VisualsComponent.NoRecoil,
                 Components.VisualsComponent.DrawTotalPlayersCount,
             };
 
@@ -1123,7 +1126,7 @@ namespace EscapeFromTarkov
 
             Overlay.RemoveTopMostFlag(true);
             Memory.TerminateProcess("WeScript.Loader.exe"); //close the loader because it's detected from EAC
-            DelayAction.Queue(() => LoadSpoofer(), 1000); //firstly spoof hwid
+            //DelayAction.Queue(() => LoadSpoofer(), 1000); //firstly spoof hwid
             //some chill delay of 1000ms first :)
             DelayAction.Queue(() => LoadDriver(), 2000); //second load RPM driver
         }
@@ -1166,7 +1169,7 @@ namespace EscapeFromTarkov
                     if (gameObjectManager == IntPtr.Zero)
                     {
                         gameObjectManager =
-                            Memory.ZwReadPointer(processHandle, (IntPtr)ModuleBase + 0x151A218, isWow64Process);
+                            Memory.ZwReadPointer(processHandle, (IntPtr)ModuleBase + 0x156B698, isWow64Process);
                         Console.WriteLine("Found GameObject Manager At " + gameObjectManager.ToString("X"));
                     }
                 }
@@ -1258,34 +1261,43 @@ namespace EscapeFromTarkov
         }
 
         //[Obsolete]
-        //private unsafe Vector3 GetBonePosition(IntPtr transform)
+        //private static unsafe Vector3 GetBonePosition(IntPtr transform)
         //{
-        //    IntPtr transform_internal = RPM.GetPtr(transform, new int[] { 0x10 });
-        //    if (!RPM.IsValid(transform_internal.ToInt64()))
+        //    IntPtr transform_internal = ReadChainPtr(transform.ToInt64(), false, new uint[] { 0x10 });
+        //    if (transform_internal == IntPtr.Zero)
         //        return new Vector3();
 
-        //    IntPtr pMatrix = RPM.GetPtr(transform_internal, new int[] { 0x38 });
-        //    int index = RPM.Read<int>(RPM.GetPtr(transform_internal, new int[] { 0x38 + sizeof(UInt64) }).ToInt64());
-        //    if (!RPM.IsValid(pMatrix.ToInt64()))
+        //    IntPtr pMatrix = ReadChainPtr(transform_internal.ToInt32(), false, new uint[] { 0x38 });
+        //    int index = Memory.ZwReadInt32(processHandle, (IntPtr)ReadChainPtr(transform_internal.ToInt64(), false, new uint[] { 0x38 + sizeof(UInt64) }).ToInt64());
+        //    if (pMatrix == IntPtr.Zero)
         //        return new Vector3();
 
-        //    IntPtr matrix_list_base = RPM.GetPtr(pMatrix, new int[] { 0x8 });
-        //    if (!RPM.IsValid(matrix_list_base.ToInt64()))
+        //    IntPtr matrix_list_base = ReadChainPtr(pMatrix.ToInt64(), false, new uint[] { 0x8 });
+        //    if (matrix_list_base == IntPtr.Zero)
         //        return new Vector3();
 
-        //    IntPtr dependency_index_table_base = RPM.GetPtr(pMatrix, new int[] { 0x10 });
-        //    if (!RPM.IsValid(dependency_index_table_base.ToInt64()))
+        //    IntPtr dependency_index_table_base = ReadChainPtr(pMatrix.ToInt64(), false, new uint[] { 0x10 });
+        //    if (dependency_index_table_base == IntPtr.Zero)
         //        return new Vector3();
 
-        //    IntPtr pMatricesBufPtr = Marshal.AllocHGlobal(sizeof(Matrix34) * index + sizeof(Matrix34)); // sizeof(Matrix34) == 48
-        //    void* pMatricesBuf = pMatricesBufPtr.ToPointer();
-        //    RPM.ReadBytes(RPM.GetPtr(matrix_list_base, new int[] { 0 }).ToInt64(), pMatricesBuf, sizeof(Matrix34) * index + sizeof(Matrix34));
 
-        //    IntPtr pIndicesBufPtr = Marshal.AllocHGlobal(sizeof(int) * index + sizeof(int));
-        //    void* pIndicesBuf = pIndicesBufPtr.ToPointer();
-        //    RPM.ReadBytes(RPM.GetPtr(dependency_index_table_base, new int[] { 0 }).ToInt64(), pIndicesBuf, sizeof(int) * index + sizeof(int));
+        //    byte[] pMatricesBuff = new byte[(sizeof(Matrix34) * index) + sizeof(Matrix34)];
+        //    Memory.ZwReadBytes(processHandle,
+        //        Memory.ReadIntPtr(processHandle, (IntPtr) matrix_list_base.ToInt64() + 0x0, isWow64Process),
+        //        ref pMatricesBuff, (uint) ((sizeof(Matrix34) * index) + sizeof(Matrix34)));
+        //    GCHandle pMatricesBufff = GCHandle.Alloc(pMatricesBuff, GCHandleType.Pinned);
+        //    void* pMatricesBuf = pMatricesBufff.AddrOfPinnedObject().ToPointer();
+
+
+        //    byte[] pIndicesBuff = new byte[sizeof(int) * index + sizeof(int)];
+        //    Memory.ZwReadBytes(processHandle,
+        //        Memory.ReadIntPtr(processHandle, (IntPtr)dependency_index_table_base.ToInt64() + 0x0, isWow64Process),
+        //        ref pMatricesBuff, (uint)(sizeof(int) * index + sizeof(int)));
+        //    GCHandle pIndicesBufff = GCHandle.Alloc(pIndicesBuff, GCHandleType.Pinned);
+        //    void* pIndicesBuf = pIndicesBufff.AddrOfPinnedObject().ToPointer();
 
         //    Vector4f result = *(Vector4f*)((UInt64)pMatricesBuf + 0x30 * (UInt64)index);
+
         //    int index_relation = *(int*)((UInt64)pIndicesBuf + 0x4 * (UInt64)index);
 
         //    Vector4f xmmword_1410D1340 = new Vector4f(-2.0f, 2.0f, -2.0f, 0.0f);
@@ -1310,8 +1322,8 @@ namespace EscapeFromTarkov
         //        index_relation = *(int*)((UInt64)pIndicesBuf + 0x4 * (UInt64)index_relation);
         //    }
 
-        //    Marshal.FreeHGlobal(pMatricesBufPtr);
-        //    Marshal.FreeHGlobal(pIndicesBufPtr);
+        //    pIndicesBufff.Free();
+        //    pMatricesBufff.Free();
 
         //    return new Vector3(result.X, result.Y, result.Z);
         //}
@@ -1320,7 +1332,7 @@ namespace EscapeFromTarkov
             // UnityPlayer.dll + 0x14BB400
             // Sig: 48 8B 15 ? ? ? ? 48 8B 4A 10   
             //var camManagerPtr = Memory.ZwReadPointer(processHandle, (IntPtr)ModuleBase.ToInt64() + 0x14BB400, isWow64Process);
-            var camManagerAddr = Memory.ZwReadPointer(processHandle, (IntPtr)ModuleBase.ToInt64() + 0x14BB400, isWow64Process);
+            var camManagerAddr = Memory.ZwReadPointer(processHandle, (IntPtr)ModuleBase.ToInt64() + 0x150DA00, isWow64Process);
             var cameraArray = Memory.ZwReadPointer(processHandle, (IntPtr)camManagerAddr, isWow64Process);
             var cameraArrayCount = Memory.ZwReadUInt64(processHandle, (IntPtr)camManagerAddr + 0x8 * 2);
 
@@ -1400,7 +1412,7 @@ namespace EscapeFromTarkov
             {
                 pArrayObj = Memory.ZwReadUInt64(processHandle, (IntPtr)(gWorld + 0x78)); // -.ClientLocalGameWorld->RegisteredPlayers (Type: List<Player>)
 
-                itemsArrayObj = Memory.ZwReadUInt64(processHandle, (IntPtr)(gWorld + 0x70));
+                itemsArrayObj = Memory.ZwReadUInt64(processHandle, (IntPtr)(gWorld + 0x58));
 
                 pArrayLen = Memory.ZwReadInt32(processHandle, (IntPtr)(pArrayObj + 0x18)); // List<T>._size
                 itemsArrayLen = Memory.ZwReadInt32(processHandle, (IntPtr)(itemsArrayObj + 0x18)); // List<T>._size
@@ -1462,7 +1474,13 @@ namespace EscapeFromTarkov
                 }
             }
 
-            var localpProfile = Memory.ZwReadUInt64(processHandle, (IntPtr)LocalPlayerPtr.ToInt64() + 0x3D0);
+            var WeaponAnimationPtr =
+                Memory.ZwReadPointer(processHandle, (IntPtr)LocalPlayerPtr.ToInt64() + 0x0188, isWow64Process);
+            //Console.WriteLine("Default Value OF Mask: " + Memory.ZwReadFloat(processHandle, (IntPtr)WeaponAnimationPtr.ToInt64() + 0x0F8));
+            if (Components.VisualsComponent.NoRecoil.Enabled)
+                Memory.ZwWriteFloat(processHandle, (IntPtr)WeaponAnimationPtr.ToInt64() + 0x0F8, 0f);
+
+            var localpProfile = Memory.ZwReadUInt64(processHandle, (IntPtr)LocalPlayerPtr.ToInt64() + 0x408);
             var localpInfo = Memory.ZwReadUInt64(processHandle, (IntPtr)localpProfile + 0x28);
             var localpGroupIdPtr = Memory.ZwReadUInt64(processHandle, (IntPtr)localpInfo + 0x18);
             var localpGroupId = Memory.ZwReadString(processHandle, (IntPtr)localpGroupIdPtr + 0x14, true, 64);
@@ -1485,36 +1503,49 @@ namespace EscapeFromTarkov
                 {
                     for (int i = 0; i < itemsArrayLen; i++)
                     {
-                        var item = Memory.ZwReadPointer(processHandle, (IntPtr)(itemsArrayBase + i * 0x8),
+                        var lootItem = Memory.ZwReadPointer(processHandle, (IntPtr)(itemsArrayBase + i * 0x8),
                             isWow64Process);
-                        var itemLoc = Memory.ZwReadVector3(processHandle, (IntPtr)item.ToInt64() + 0x28);
-                        var itemObj = Memory.ZwReadPointer(processHandle, (IntPtr)item.ToInt64() + 0x18,
+                        var lootItemProfile = Memory.ZwReadPointer(processHandle, (IntPtr)(lootItem.ToInt64() + 0x10),
                             isWow64Process);
+                        var lootItemPos = Memory.ZwReadVector3(processHandle, (IntPtr)ReadChainPtr(lootItemProfile.ToInt64(), false, 0x30, 0x30, 0x8, 0x38).ToInt64() + 0xB0);
+                        var interactiveItem = Memory.ZwReadPointer(processHandle, (IntPtr)(lootItemProfile + 0x28),
+                            isWow64Process);
+                        var itemObj = Memory.ZwReadPointer(processHandle, (IntPtr)(interactiveItem.ToInt64() + 0x50),
+                            isWow64Process);
+                        var itemTemplateObj = Memory.ZwReadPointer(processHandle, (IntPtr)(itemObj.ToInt64() + 0x38),
+                            isWow64Process);
+
+                        //var item = Memory.ZwReadPointer(processHandle, (IntPtr)(interactiveItem + 0x50),
+                        //    isWow64Process);
+                        //var itemLoc = Memory.ZwReadVector3(processHandle, (IntPtr)item.ToInt64() + 0x28);
+                        //var itemObj = Memory.ZwReadPointer(processHandle, (IntPtr)item.ToInt64() + 0x18,
+                        //    isWow64Process);
                         var itemObjId = Memory.ZwReadPointer(processHandle, (IntPtr)itemObj.ToInt64() + 0x18,
                             isWow64Process);
                         var itemObjIdStr = Memory.ZwReadString(processHandle, (IntPtr)itemObjId + 0x14, true, 64);
-                        var currentAddress = Memory.ZwReadPointer(processHandle, (IntPtr)itemObj.ToInt64() + 0x38,
-                            isWow64Process);
-                        var itemTemplate = Memory.ZwReadPointer(processHandle, (IntPtr)itemObj.ToInt64() + 0x40,
-                            isWow64Process);
-                        var itemIdStr = Memory.ZwReadUInt64(processHandle, (IntPtr)itemTemplate.ToInt64() + 0x50);
+                        //var currentAddress = Memory.ZwReadPointer(processHandle, (IntPtr)itemObj.ToInt64() + 0x38,
+                        //    isWow64Process);
+                        //var itemTemplate = Memory.ZwReadPointer(processHandle, (IntPtr)itemObj.ToInt64() + 0x40,
+                        //    isWow64Process);
+                        var itemIdStr = Memory.ZwReadUInt64(processHandle, (IntPtr)itemTemplateObj.ToInt64() + 0x50);
+                        var itemNameObtained =
+                            Memory.ZwReadUInt64(processHandle, (IntPtr)itemTemplateObj.ToInt64() + 0x18);
+                        var itemNameObtainedStr =
+                            Memory.ZwReadString(processHandle, (IntPtr)itemNameObtained + 0x14, true, 31);
                         var itemId =
-                            Memory.ZwReadString(processHandle, (IntPtr)itemIdStr + 0x14, true, 64); // Read as Unicode
+                            Memory.ZwReadString(processHandle, (IntPtr)itemIdStr + 0x14, true, 31); // Read as Unicode
                         bool alreadyLooted = false;
-                        if (!ItemsAddressHistory.ContainsKey(itemObjIdStr))
-                            ItemsAddressHistory.Add(itemObjIdStr, currentAddress.ToInt64());
-                        else
-                            alreadyLooted = ItemsAddressHistory[itemObjIdStr] != currentAddress.ToInt64();
 
-                        if (!itemsMenuComponentDic.ContainsKey(itemId) ||
-                            !itemsMenuComponentDic[itemId].Enabled)
+                        if (!itemId.Contains("55d7217a4bdc2d86028b456d") && (!itemsMenuComponentDic.ContainsKey(itemId) ||
+                            !itemsMenuComponentDic[itemId].Enabled))
                             continue;
 
                         LootItems.Add(new ItemObj
                         {
                             itemId = itemId,
-                            pos = itemLoc,
-                            AlreadyLooted = alreadyLooted
+                            pos = lootItemPos,
+                            AlreadyLooted = alreadyLooted,
+                            itemName = itemNameObtainedStr
                         });
                     }
 
@@ -1579,12 +1610,18 @@ namespace EscapeFromTarkov
                         itemName = AmmoIdsToNamesDic[item.itemId];
                     }
 
+                    if (item.itemId.Contains("55d7217a4bdc2d86028b456d"))
+                        itemName = "Dead Body";
+
+                    if (string.IsNullOrEmpty(itemName))
+                        itemName = item.itemId;
+
                     if (item.AlreadyLooted) continue;
                     var distance = GetDistance3D(localLocation, item.pos);
                     var vecOut = new Vector2();
                     if (Renderer.WorldToScreen(item.pos, out vecOut, viewMatrix, wndMargins, wndSize, W2SType.TypeOGL))
                     {
-                        Renderer.DrawText(itemName + $"[{distance:0}m]", vecOut, Color.White,
+                        Renderer.DrawText(itemName + $"[{distance:0}m] " + item.itemName, vecOut, Color.White,
                             12);
                     }
                 }
@@ -1598,7 +1635,7 @@ namespace EscapeFromTarkov
 
                     var pProfile =
                         Memory.ZwReadUInt64(processHandle,
-                            (IntPtr)entity.ToInt64() + 0x3D0); // EFT.Player->profile_0x3d8 (Type: EFT.Profile)
+                            (IntPtr)entity.ToInt64() + 0x408); // EFT.Player->profile_0x3d8 (Type: EFT.Profile)
                     var pInfo = Memory.ZwReadUInt64(processHandle,
                         (IntPtr)pProfile + 0x28); // EFT.Profile->Info (Type: -.ObfuscatedClass1044)
                     var pGroupIdPtr =
@@ -1612,7 +1649,7 @@ namespace EscapeFromTarkov
                             (IntPtr)pInfo + 0x10); //-.GClass1044->Nickname (Type: String)
                     var pName = Memory.ZwReadString(processHandle, (IntPtr)pNickname + 0x14, true,
                         64); // Read as Unicode
-                    var pHealthController = Memory.ZwReadInt64(processHandle, (IntPtr)entity.ToInt64() + 0x400);
+                    var pHealthController = Memory.ZwReadInt64(processHandle, (IntPtr)entity.ToInt64() + 0x438);
 
                     float totalHP = 0f;
                     float currentHP = 0f;
@@ -1703,33 +1740,15 @@ namespace EscapeFromTarkov
                         }
                     }
 
-                    //var bMtx = ReadChain((uint)entity.ToInt64(), 0xA0, 0x28, 0x28, 0x18);
-
-                    //if (bMtx == 0)
-                    //    continue;
-
                     //var bonesList = (IntPtr)ReadChain((uint)entity.ToInt64(), 0xA0, 0x28, 0x28);
-                    //var bonesCnt = Memory.ZwReadInt32(processHandle, (IntPtr)bonesList.ToInt64() + 0x18);
-                    //Console.WriteLine("Bones Count : " + bonesCnt);
-                    //bMtx += 0x20;
-
-                    //for (int j = 0; j < bonesCnt; j++)
+                    ////var bonesCnt = Memory.ZwReadInt32(processHandle, (IntPtr)bonesList.ToInt64() + 0x18);
+                    //IntPtr headTransform = Memory.ZwReadIntPtr(processHandle,
+                    //    (IntPtr) bonesList.ToInt64() + (0x20 + (133 * 8)), isWow64Process);
+                    //Vector3 headPos = GetBonePosition(headTransform);
+                    //if (Renderer.WorldToScreen(headPos, out vecOutFeet, viewMatrix, wndMargins, wndSize, W2SType.TypeOGL))
                     //{
-                    //    var boneObj = Memory.ZwReadPointer(processHandle, (IntPtr)bMtx + j * 0x8, isWow64Process);
-                    //    if (boneObj == IntPtr.Zero)
-                    //        continue;
-
-                    //    var boneBeforeVec = ReadChain((uint)boneObj.ToInt64(), 0x10, 0x38);
-
-                    //    var boneLoc = Memory.ZwReadVector3(processHandle, (IntPtr)boneBeforeVec + 0xB0);
-
-                    //    if (boneLoc.IsZero)
-                    //        continue;
-
-                    //    if (Renderer.WorldToScreen(boneLoc, out vecOutFeet, viewMatrix, wndMargins, wndSize, W2SType.TypeOGL))
-                    //    {
-                    //        Renderer.DrawCircleFilled(vecOutFeet, 3f, Color.Red);
-                    //    }
+                    //    Console.WriteLine(headPos.ToString());
+                    //    Renderer.DrawCircleFilled(vecOutFeet, 3f, Color.Red);
                     //}
                 }
             }
@@ -1740,6 +1759,7 @@ namespace EscapeFromTarkov
     {
         public Vector3 pos;
         public string itemId;
+        public string itemName;
         public string address;
         public bool AlreadyLooted;
     }
