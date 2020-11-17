@@ -1621,7 +1621,7 @@ namespace EscapeFromTarkov
                     var vecOut = new Vector2();
                     if (Renderer.WorldToScreen(item.pos, out vecOut, viewMatrix, wndMargins, wndSize, W2SType.TypeOGL))
                     {
-                        Renderer.DrawText(itemName + $"[{distance:0}m] " + item.itemName, vecOut, Color.White,
+                        Renderer.DrawText(itemName + $"[{distance:0}m]", vecOut, Color.White,
                             12);
                     }
                 }
