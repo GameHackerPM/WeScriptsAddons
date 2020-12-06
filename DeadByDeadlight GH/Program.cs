@@ -274,11 +274,11 @@ namespace DeadByDaylight
                             if (ULocalPlayerControler != IntPtr.Zero)
                             {
                                 var ULocalPlayerPawn = Memory.ZwReadPointer(processHandle,
-                                    (IntPtr)ULocalPlayerControler.ToInt64() + 0x02B8, isWow64Process);
+                                    (IntPtr)ULocalPlayerControler.ToInt64() + 0x0278, isWow64Process);
                                 if (ULocalPlayerPawn != IntPtr.Zero)
                                 {
                                     var UInteractionHandler = Memory.ZwReadPointer(processHandle,
-                                        (IntPtr)ULocalPlayerPawn.ToInt64() + 0x0950, isWow64Process);
+                                        (IntPtr)ULocalPlayerPawn.ToInt64() + 0x0888, isWow64Process);
 
                                     if (UInteractionHandler != IntPtr.Zero)
                                     {
