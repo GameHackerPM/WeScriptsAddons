@@ -283,7 +283,7 @@ namespace DeadByDaylight
                                     if (UInteractionHandler != IntPtr.Zero)
                                     {
                                         USkillCheck = Memory.ZwReadPointer(processHandle,
-                                            (IntPtr)UInteractionHandler.ToInt64() + 0x0280, isWow64Process);
+                                            (IntPtr)UInteractionHandler.ToInt64() + 0x02B8, isWow64Process);
                                     }
 
                                     var ULocalRoot = Memory.ZwReadPointer(processHandle,
